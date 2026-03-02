@@ -55,7 +55,7 @@
 
   .frame {
     width: min(980px, 100%);
-    min-height: min(700px, calc(100vh - 28px));
+    min-height: min(700px, calc(100dvh - 28px));
     background: linear-gradient(180deg, #152230, #121b25);
     border: 4px solid var(--line-dark);
     box-shadow:
@@ -1926,16 +1926,41 @@
   }
 
   @media (max-width: 760px) {
-    .frame { min-height: auto; }
+    .app { padding: 6px; }
+    .frame {
+      min-height: calc(100dvh - 12px);
+      padding: 8px;
+      border-width: 3px;
+      box-shadow: inset 0 0 0 2px var(--line-mid), inset 0 0 0 4px var(--line-light), 0 6px 0 rgba(0,0,0,0.28);
+    }
+    .panel { padding: 9px; }
+    .title-screen { gap: 10px; }
     .difficulty-grid { grid-template-columns: 1fr; }
     .hero-select-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .map-board { min-height: auto; padding: 8px; }
-    .map-canvas { min-height: 560px; }
+    .map-canvas { min-height: clamp(340px, 58vh, 460px); }
+    .stage-node { width: 62px; height: 62px; }
+    .player-marker-avatar { width: 52px; height: 52px; }
     .hud, .arena, .question-area { grid-template-columns: 1fr; }
     .char-panel { min-height: 180px; }
     .choices { grid-template-columns: 1fr; }
+    .pixel-btn { padding: 11px 9px; min-height: 44px; }
+    .gacha-screen .gacha-cutin { min-height: 250px; }
     .battle-footer { flex-direction: column; align-items: flex-start; }
     .map-footer { flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (max-width: 430px) {
+    .frame { padding: 6px; }
+    .title-main { font-size: clamp(24px, 7vw, 32px); }
+    .title-sub { font-size: 12px; }
+    .map-title { font-size: clamp(18px, 6vw, 24px); }
+    .map-sub { font-size: 12px; }
+    .stage-node-label { font-size: 10px; top: -22px; }
+    .stage-node-state { font-size: 9px; bottom: -18px; }
+    .pixel-btn { font-size: 14px; letter-spacing: 0.5px; }
+    .question-text { font-size: 18px; }
+    .message-line { font-size: 13px; }
   }
 </style>
 </head>
