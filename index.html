@@ -1,0 +1,3486 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>算数ファンタジー</title>
+<style>
+  :root {
+    --bg1: #0f1f2b;
+    --bg2: #20394a;
+    --panel: #1a2533;
+    --panel2: #223447;
+    --ink: #f4f1d7;
+    --muted: #b9c7c9;
+    --accent: #ffd84d;
+    --danger: #ff6b5b;
+    --heal: #66e08d;
+    --line-dark: #0a1118;
+    --line-mid: #486070;
+    --line-light: #a7bdc8;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: "MS Gothic", "Yu Gothic UI", monospace;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 20% 10%, #3a5b6d 0 12%, transparent 13%),
+      radial-gradient(circle at 80% 18%, #2b4454 0 10%, transparent 11%),
+      radial-gradient(circle at 10% 85%, #254050 0 12%, transparent 13%),
+      linear-gradient(180deg, var(--bg2), var(--bg1));
+    image-rendering: auto;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 8px 8px;
+    opacity: 0.6;
+  }
+
+  .app {
+    min-height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 14px;
+  }
+
+  .frame {
+    width: min(980px, 100%);
+    min-height: min(700px, calc(100vh - 28px));
+    background: linear-gradient(180deg, #152230, #121b25);
+    border: 4px solid var(--line-dark);
+    box-shadow:
+      inset 0 0 0 3px var(--line-mid),
+      inset 0 0 0 6px var(--line-light),
+      0 12px 0 rgba(0,0,0,0.35);
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .screen { display: none; height: 100%; }
+  .screen.active { display: grid; }
+
+  .panel {
+    background: linear-gradient(180deg, var(--panel2), var(--panel));
+    border: 3px solid var(--line-dark);
+    box-shadow: inset 0 0 0 2px var(--line-mid), inset 0 0 0 4px rgba(255,255,255,0.05);
+    padding: 12px;
+  }
+
+  .title-screen {
+    grid-template-rows: 1fr auto auto 1fr;
+    gap: 16px;
+    align-content: center;
+  }
+
+  .map-screen {
+    grid-template-rows: auto 1fr auto;
+    gap: 12px;
+    align-content: stretch;
+  }
+
+  .map-header {
+    display: grid;
+    gap: 8px;
+  }
+
+  .map-title {
+    margin: 0;
+    color: #fff3b0;
+    letter-spacing: 2px;
+    font-size: clamp(20px, 3vw, 28px);
+  }
+
+  .map-sub {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .map-board {
+    position: relative;
+    display: grid;
+    align-items: center;
+    padding: 18px;
+    min-height: 320px;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(255,216,77,0.08), transparent 35%),
+      radial-gradient(circle at 80% 75%, rgba(102,224,141,0.07), transparent 30%),
+      linear-gradient(180deg, #1b2c3b, #111a24);
+  }
+
+  .map-path {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .map-path svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .stage-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    align-items: end;
+  }
+
+  .stage-card {
+    min-height: 118px;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 6px;
+    align-content: start;
+    text-align: left;
+    padding: 10px;
+    position: relative;
+  }
+
+  .stage-card.locked {
+    filter: grayscale(0.85) brightness(0.8);
+    cursor: not-allowed;
+  }
+
+  .stage-no {
+    font-size: 12px;
+    color: #fff3b0;
+    letter-spacing: 1px;
+  }
+
+  .stage-name {
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: bold;
+  }
+
+  .stage-enemy {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .stage-state {
+    font-size: 11px;
+    color: #d2e7ef;
+    letter-spacing: 1px;
+  }
+
+  .stage-card.cleared .stage-state { color: #9ff0b6; }
+  .stage-card.current { box-shadow: inset 0 0 0 2px #5a7485, inset 0 0 0 4px rgba(255,216,77,0.2), inset 0 -4px 0 rgba(0,0,0,0.25); }
+
+  .map-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .map-board {
+    padding: 10px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0)),
+      linear-gradient(180deg, #efe1b3, #e4cf95);
+  }
+
+  .map-canvas {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    min-height: 420px;
+    border: 3px solid #4f3d20;
+    box-shadow: inset 0 0 0 2px #b88939, inset 0 0 0 5px rgba(255,255,255,0.15);
+    background:
+      linear-gradient(rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+      url('map/map.png') center center / cover no-repeat;
+    overflow: hidden;
+  }
+
+  .map-canvas::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.06), rgba(255,255,255,0));
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .map-toolbar {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    z-index: 3;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    pointer-events: none;
+    display: none;
+  }
+
+  .map-toolbar-left {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .map-icon {
+    position: relative;
+    min-width: 58px;
+    height: 42px;
+    background: linear-gradient(180deg, #fff3c7, #dcc687);
+    border: 3px solid #47361a;
+    box-shadow: inset 0 0 0 2px #a07833;
+    color: #3f2c11;
+    font-size: 11px;
+    display: grid;
+    place-items: center;
+    padding: 4px;
+    border-radius: 6px;
+    transform: rotate(-2deg);
+  }
+
+  .map-icon.run { transform: rotate(8deg); }
+  .map-icon.back {
+    min-width: 74px;
+    background: linear-gradient(180deg, #d2d2d2, #a4a4a4);
+    color: #222;
+    border-color: #444;
+    box-shadow: inset 0 0 0 2px #cfcfcf;
+    transform: none;
+  }
+
+  .map-icon.run::after {
+    content: "NEW!";
+    position: absolute;
+    top: -10px;
+    right: -14px;
+    background: #ff4f2f;
+    color: #fff7dc;
+    border: 2px solid #7d200f;
+    padding: 1px 4px;
+    font-size: 10px;
+    transform: rotate(14deg);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.25);
+  }
+
+  .map-sea, .map-river, .map-hills, .map-town, .map-gate {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+    display: none;
+  }
+
+  .map-sea {
+    left: -4%;
+    bottom: 10%;
+    width: 34%;
+    height: 44%;
+    background:
+      radial-gradient(circle at 40% 30%, rgba(255,255,255,0.38) 0 5%, transparent 6%),
+      radial-gradient(circle at 70% 52%, rgba(255,255,255,0.28) 0 4%, transparent 5%),
+      linear-gradient(180deg, #9ae8ff, #4da5de 55%, #3475af);
+    border-radius: 55% 45% 60% 40% / 45% 55% 45% 55%;
+    opacity: 0.75;
+  }
+
+  .map-river {
+    right: 6%;
+    top: 12%;
+    width: 18%;
+    height: 62%;
+    border-radius: 40px;
+    background:
+      linear-gradient(180deg, rgba(198,245,255,0.95), rgba(117,185,255,0.9) 50%, rgba(153,136,255,0.85));
+    transform: rotate(10deg);
+    opacity: 0.65;
+    filter: blur(0.2px);
+  }
+
+  .map-hills {
+    inset: 6% 6% auto 18%;
+    height: 24%;
+    background:
+      radial-gradient(ellipse at 10% 90%, #8bd15f 0 28%, transparent 29%),
+      radial-gradient(ellipse at 28% 88%, #9be269 0 31%, transparent 32%),
+      radial-gradient(ellipse at 50% 85%, #7ccf53 0 30%, transparent 31%),
+      radial-gradient(ellipse at 70% 88%, #93dd68 0 29%, transparent 30%),
+      radial-gradient(ellipse at 88% 90%, #7ac54d 0 26%, transparent 27%);
+    opacity: 0.72;
+  }
+
+  .map-town {
+    right: 27%;
+    top: 18%;
+    width: 12%;
+    height: 16%;
+    background:
+      linear-gradient(180deg, transparent 0 25%, #c53f2f 25% 45%, transparent 45%),
+      linear-gradient(90deg, transparent 0 43%, #c53f2f 43% 57%, transparent 57%),
+      linear-gradient(180deg, transparent 0 45%, #8f5832 45% 100%, transparent 100%);
+    opacity: 0.85;
+  }
+
+  .map-gate {
+    left: 10%;
+    top: 26%;
+    width: 10%;
+    height: 12%;
+    background:
+      linear-gradient(180deg, transparent 0 40%, #d63f22 40% 52%, transparent 52%),
+      linear-gradient(90deg, transparent 0 18%, #cf3419 18% 24%, transparent 24%),
+      linear-gradient(90deg, transparent 0 76%, #cf3419 76% 82%, transparent 82%);
+    opacity: 0.9;
+  }
+
+  .map-path {
+    z-index: 1;
+    inset: 0;
+    display: none;
+  }
+
+  .stage-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: block;
+  }
+
+  .stage-node {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    pointer-events: auto;
+    z-index: 10;
+  }
+
+  .stage-node::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    z-index: 2;
+    border: 3px solid rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.08);
+    box-shadow:
+      0 0 0 4px rgba(0,0,0,0.22),
+      0 0 18px rgba(255,255,255,0.28),
+      inset 0 0 10px rgba(255,255,255,0.18);
+  }
+
+  .stage-node-icon {
+    position: absolute;
+    inset: 8px;
+    z-index: 1;
+    width: calc(100% - 16px);
+    height: calc(100% - 16px);
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+    filter: saturate(1.02);
+  }
+
+  .stage-node:hover:not(:disabled) { filter: brightness(1.08); }
+  .stage-node:disabled { cursor: not-allowed; }
+
+  .stage-node.locked {
+    filter: grayscale(1) brightness(0.7);
+  }
+
+  .stage-node.locked::before {
+    border-color: rgba(180,180,180,0.8);
+    background: rgba(40,40,40,0.2);
+    box-shadow: 0 0 0 4px rgba(0,0,0,0.25), inset 0 0 10px rgba(0,0,0,0.25);
+  }
+
+  .stage-node.cleared {
+    filter: none;
+  }
+
+  .stage-node.cleared::before {
+    border-color: #ffd24d;
+    box-shadow:
+      0 0 0 4px rgba(235,153,0,0.25),
+      0 0 20px rgba(255,216,77,0.55),
+      inset 0 0 14px rgba(255,230,140,0.25);
+  }
+
+  .stage-node.current {
+    animation: stagePulse 1s ease-in-out infinite;
+  }
+
+  .stage-node.current::before {
+    border-color: #ff3d3d;
+    box-shadow:
+      0 0 0 5px rgba(255,60,60,0.22),
+      0 0 26px rgba(255,80,80,0.75),
+      inset 0 0 14px rgba(255,255,255,0.22);
+  }
+
+  .stage-node.final {
+    filter: none;
+  }
+
+  .stage-node.final::before {
+    border-color: #7a2fff;
+    box-shadow:
+      0 0 0 5px rgba(130,70,255,0.2),
+      0 0 24px rgba(150,110,255,0.65),
+      inset 0 0 14px rgba(255,255,255,0.22);
+  }
+
+  .stage-node-label {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    z-index: 4;
+    transform: translateX(-50%);
+    background: rgba(22,28,38,0.86);
+    color: #fff6cf;
+    border: 2px solid rgba(255,221,129,0.7);
+    padding: 1px 6px;
+    font-size: 11px;
+    border-radius: 8px;
+    white-space: nowrap;
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.18);
+  }
+
+  .stage-node-state {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    z-index: 4;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #f8f6e8;
+    background: rgba(22,28,38,0.72);
+    border-radius: 8px;
+    padding: 0 5px;
+    white-space: nowrap;
+  }
+
+  .stage-node.locked .stage-node-state {
+    background: rgba(44,44,44,0.75);
+    color: #e7e7e7;
+  }
+
+  .stage-node-badge {
+    position: absolute;
+    top: -24px;
+    right: -12px;
+    background: #ff4d33;
+    color: #fff8d9;
+    border: 2px solid #7e1d0f;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 1px 5px;
+    transform: rotate(10deg);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.25);
+  }
+
+  .player-marker-avatar {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 64px;
+    height: 64px;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.88);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.35);
+    object-fit: cover;
+    object-position: center 18%;
+    background: rgba(8,14,20,0.35);
+    pointer-events: none;
+  }
+
+  .enemy-silhouette {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: 30px;
+    height: 28px;
+    transform: translate(-50%, -50%);
+    background: #090909;
+    border-radius: 45% 45% 35% 35%;
+    z-index: 1;
+  }
+
+  .enemy-silhouette::before,
+  .enemy-silhouette::after {
+    content: "";
+    position: absolute;
+    top: -5px;
+    width: 8px;
+    height: 8px;
+    background: #090909;
+    transform: rotate(45deg);
+  }
+
+  .enemy-silhouette::before { left: 3px; }
+  .enemy-silhouette::after { right: 3px; }
+
+  .enemy-silhouette span {
+    position: absolute;
+    top: 11px;
+    left: 8px;
+    width: 4px;
+    height: 4px;
+    background: #fff;
+    box-shadow: 10px 0 0 #fff;
+  }
+
+  .title-box {
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 24px 12px;
+    background:
+      linear-gradient(180deg, rgba(255,216,77,0.2), rgba(255,216,77,0.05)),
+      linear-gradient(180deg, #243345, #17212d);
+  }
+
+  .title-main {
+    font-size: clamp(26px, 5vw, 46px);
+    letter-spacing: 3px;
+    margin: 0;
+    color: #fff3b0;
+    text-shadow: 2px 2px 0 #7e5f00, 4px 4px 0 #2b2100;
+  }
+
+  .title-sub {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .difficulty-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .hero-select-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .hero-card {
+    padding: 6px;
+    background: linear-gradient(180deg, #213241, #17232f);
+    display: grid;
+    gap: 4px;
+    text-align: center;
+    min-height: 124px;
+  }
+
+  .hero-card.locked {
+    filter: grayscale(1) brightness(0.72);
+    cursor: not-allowed;
+  }
+
+  .hero-card.selected {
+    box-shadow: inset 0 0 0 2px #ffd65a, inset 0 0 0 4px rgba(255,255,255,0.08), inset 0 -4px 0 rgba(0,0,0,0.2);
+  }
+
+  .hero-thumb {
+    width: 100%;
+    height: 74px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+  }
+
+  .hero-card-name {
+    font-size: 11px;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+
+  .hero-card-state {
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .hero-card.selected .hero-card-state { color: #ffe48b; }
+
+  .gacha-panel {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .gacha-note {
+    font-size: 12px;
+    color: var(--muted);
+    min-height: 18px;
+  }
+
+  .gacha-screen {
+    position: relative;
+    grid-template-rows: auto 1fr auto;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  .gacha-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 25%, rgba(64, 160, 255, 0.24), transparent 35%),
+      radial-gradient(circle at 80% 30%, rgba(255, 210, 120, 0.22), transparent 34%),
+      radial-gradient(circle at 50% 80%, rgba(170, 120, 255, 0.18), transparent 38%),
+      linear-gradient(180deg, #0b1624 0%, #131e31 100%);
+    z-index: 0;
+  }
+
+  .gacha-screen > * { position: relative; z-index: 1; }
+
+  .gacha-sub {
+    margin: 0;
+    color: #d6ecff;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  .gacha-cutin {
+    position: relative;
+    overflow: hidden;
+    border: 2px solid #2f4350;
+    border-radius: 8px;
+    background: radial-gradient(circle at center, rgba(90,120,150,0.35), rgba(8,10,20,0.9));
+    min-height: 160px;
+    display: none;
+    place-items: center;
+  }
+
+  .gacha-cutin.active { display: grid; }
+
+  .gacha-screen .gacha-cutin {
+    display: grid;
+    min-height: 360px;
+    background: radial-gradient(circle at center, rgba(120, 190, 255, 0.28), rgba(8,10,20,0.94));
+  }
+
+  .gacha-motion {
+    width: min(100%, 220px);
+    aspect-ratio: 3 / 4;
+    opacity: 0;
+    transform: scale(0.92) translateY(4px);
+    filter: drop-shadow(0 0 16px rgba(120,190,255,0.5));
+    background-image: none;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+  }
+
+  .gacha-screen .gacha-motion {
+    width: min(88%, 360px);
+  }
+
+  .gacha-cutin.active .gacha-motion { opacity: 1; }
+
+  .gacha-motion.play {
+    animation: gachaMotionIn 0.45s ease-out forwards;
+  }
+
+  .gacha-rarity {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px) scale(0.9);
+    min-width: 180px;
+    padding: 8px 12px;
+    text-align: center;
+    font-weight: bold;
+    border: 2px solid rgba(255,255,255,0.55);
+    border-radius: 999px;
+    background: rgba(16,26,40,0.75);
+    opacity: 0;
+    filter: drop-shadow(0 0 14px rgba(255,220,120,0.65));
+  }
+
+  .gacha-rarity.rare {
+    color: #d9efff;
+    border-color: rgba(130, 200, 255, 0.8);
+  }
+
+  .gacha-rarity.super {
+    color: #ffe89d;
+    border-color: rgba(255, 220, 120, 0.9);
+    box-shadow: 0 0 16px rgba(255, 220, 120, 0.32);
+  }
+
+  .gacha-rarity.show {
+    animation: gachaRarityPop 0.8s cubic-bezier(.16,.84,.28,1.15) forwards;
+  }
+
+  .gacha-reveal-image {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: min(68%, 280px);
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    transform: translate(-50%, -50%) scale(0.82);
+    opacity: 0;
+    filter: drop-shadow(0 0 18px rgba(120, 200, 255, 0.36));
+    transition: opacity 0.36s ease, transform 0.36s ease;
+  }
+
+  .gacha-reveal-image.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  @keyframes gachaMotionIn {
+    0% { opacity: 0; transform: scale(0.9) rotate(-1.2deg); }
+    35% { opacity: 1; transform: scale(1.04) rotate(0.6deg); }
+    70% { opacity: 1; transform: scale(0.98) rotate(-0.4deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  }
+
+  @keyframes gachaRarityPop {
+    0% { opacity: 0; transform: translateY(16px) scale(0.84); }
+    50% { opacity: 1; transform: translateY(-4px) scale(1.08); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .pixel-btn {
+    appearance: none;
+    border: 3px solid var(--line-dark);
+    box-shadow: inset 0 0 0 2px #5a7485, inset 0 -4px 0 rgba(0,0,0,0.25);
+    background: linear-gradient(180deg, #315168, #233a4c);
+    color: var(--ink);
+    padding: 12px 10px;
+    cursor: pointer;
+    font: inherit;
+    letter-spacing: 1px;
+    transition: transform 0.04s ease;
+  }
+
+  .pixel-btn:hover { filter: brightness(1.08); }
+  .pixel-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px #5a7485, inset 0 -2px 0 rgba(0,0,0,0.25); }
+  .pixel-btn.easy { background: linear-gradient(180deg, #2f6b48, #244f38); }
+  .pixel-btn.normal { background: linear-gradient(180deg, #5a5e92, #434774); }
+  .pixel-btn.hard { background: linear-gradient(180deg, #8a4f45, #6a3b33); }
+
+  .battle-screen {
+    grid-template-rows: auto 1fr auto;
+    gap: 12px;
+  }
+
+  .hud {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .status h3 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #fff3b0;
+    letter-spacing: 1px;
+  }
+
+  .status-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .hp-bar {
+    height: 16px;
+    border: 2px solid var(--line-dark);
+    background: #0a1118;
+    box-shadow: inset 0 0 0 2px #314552;
+    overflow: hidden;
+  }
+
+  .hp-fill {
+    height: 100%;
+    width: 100%;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0 8px, rgba(255,255,255,0) 8px 16px),
+      linear-gradient(180deg, #8cf0aa, #37b560);
+    transition: width 0.2s ease;
+  }
+
+  .hp-fill.low { background: linear-gradient(180deg, #ffbf66, #d36f29); }
+  .hp-fill.critical { background: linear-gradient(180deg, #ff8f86, #d44343); }
+
+  .arena {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .char-panel {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 230px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0)),
+      linear-gradient(180deg, #1b2c3b, #111a24);
+  }
+
+  .char-panel.enemy-hit {
+    animation: enemyHitShake 180ms steps(2, end);
+  }
+
+  .char-panel.enemy-hit.critical-hit {
+    animation: enemyHitShakeCritical 280ms steps(4, end);
+    box-shadow: inset 0 0 0 2px #ffd36a, inset 0 0 18px rgba(255,215,120,0.28), inset 0 0 0 4px rgba(255,255,255,0.06);
+  }
+
+  .char-panel.enemy-hit.finisher-hit {
+    animation: enemyHitShakeFinisher 320ms steps(4, end);
+  }
+
+  .char-name {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 13px;
+    color: #fff3b0;
+  }
+
+  .sprite-wrap {
+    position: relative;
+    width: 170px;
+    height: 170px;
+    display: grid;
+    place-items: center;
+  }
+
+  .hero-image {
+    position: relative;
+    z-index: 1;
+    max-width: 150px;
+    max-height: 150px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.28));
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .hero-image.magic-pose {
+    width: 150px;
+    height: 150px;
+    max-width: none;
+    max-height: none;
+    object-fit: cover;
+    object-position: center center;
+    filter: drop-shadow(0 8px 14px rgba(0,0,0,0.32));
+  }
+
+  .hero-image.magic-pose.fire {
+    object-position: center center;
+  }
+
+  .hero-image.magic-pose.glitter {
+    object-position: center center;
+  }
+
+  .hero-magic-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    background-image: url('hiromagic/hiromagic.png');
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center center;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));
+  }
+
+  .hero-magic-overlay.fire {
+    background-position: center center;
+  }
+
+  .hero-magic-overlay.glitter {
+    background-position: center center;
+  }
+
+  .hero-magic-overlay.active {
+    animation: heroMagicAppear 760ms ease-out;
+  }
+
+  @keyframes heroMagicAppear {
+    0% { opacity: 0; transform: translate(-8px, 6px) scale(0.92); }
+    12% { opacity: 1; transform: translate(0, 0) scale(1); }
+    55% { opacity: 1; transform: translate(2px, -1px) scale(1.02); }
+    100% { opacity: 0; transform: translate(6px, -3px) scale(1.05); }
+  }
+
+  .slash-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 4;
+  }
+
+  .slash-layer::before,
+  .slash-layer::after {
+    content: "";
+    position: absolute;
+    left: -15%;
+    width: 130%;
+    height: 10px;
+    opacity: 0;
+    transform: rotate(-22deg) scaleX(0.2);
+    transform-origin: left center;
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.8) 20%,
+        rgba(255,245,173,1) 45%,
+        rgba(255,255,255,0.95) 60%,
+        rgba(255,255,255,0) 100%);
+    box-shadow: 0 0 8px rgba(255,240,120,0.5);
+    border-radius: 8px;
+  }
+
+  .slash-layer::before { top: 42%; }
+  .slash-layer::after {
+    top: 52%;
+    height: 6px;
+    transform: rotate(-28deg) scaleX(0.15);
+    filter: blur(0.3px);
+  }
+
+  .slash-layer.active::before {
+    animation: slashCutMain 260ms ease-out;
+  }
+
+  .slash-layer.active::after {
+    animation: slashCutSub 220ms ease-out 40ms;
+  }
+
+  .slash-layer.critical.active::before {
+    animation: slashCutMainCritical 300ms ease-out;
+    height: 14px;
+    box-shadow: 0 0 16px rgba(255,245,140,0.95), 0 0 30px rgba(255,120,120,0.45);
+  }
+
+  .slash-layer.critical.active::after {
+    animation: slashCutSubCritical 260ms ease-out 35ms;
+    height: 8px;
+    box-shadow: 0 0 12px rgba(255,255,255,0.8), 0 0 20px rgba(255,90,90,0.35);
+  }
+
+  .slash-layer.finisher::before,
+  .slash-layer.finisher::after {
+    box-shadow: 0 0 14px rgba(255,240,120,0.8), 0 0 24px rgba(255,90,90,0.35);
+  }
+
+  .slash-layer.finisher.active::before {
+    animation: slashCutMainFinisher 360ms ease-out;
+  }
+
+  .slash-layer.finisher.active::after {
+    animation: slashCutSubFinisher 320ms ease-out 40ms;
+  }
+
+  .slash-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+    background:
+      radial-gradient(circle at 58% 48%, rgba(255,255,255,0.95), rgba(255,255,255,0.4) 25%, rgba(255,255,255,0) 58%),
+      linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0));
+    mix-blend-mode: screen;
+  }
+
+  .slash-flash.active {
+    animation: slashFlash 180ms ease-out;
+  }
+
+  .slash-flash.critical.active {
+    animation: slashFlashCritical 220ms ease-out;
+    background:
+      radial-gradient(circle at 58% 48%, rgba(255,255,255,1), rgba(255,239,170,0.8) 20%, rgba(255,120,120,0.35) 35%, rgba(255,255,255,0) 62%),
+      linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+  }
+
+  .slash-flash.finisher.active {
+    animation: slashFlashFinisher 360ms ease-out;
+  }
+
+  .critical-burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    overflow: hidden;
+  }
+
+  .critical-burst::before,
+  .critical-burst::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+
+  .critical-burst::before {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 4px solid rgba(255,240,140,0.95);
+    box-shadow:
+      0 0 14px rgba(255,245,170,0.95),
+      0 0 28px rgba(255,88,88,0.55),
+      inset 0 0 8px rgba(255,255,255,0.65);
+  }
+
+  .critical-burst::after {
+    width: 180%;
+    height: 180%;
+    background:
+      linear-gradient(35deg, transparent 46%, rgba(255,255,255,0.95) 49%, rgba(255,233,132,1) 50%, rgba(255,115,115,0.95) 51%, transparent 54%),
+      linear-gradient(-35deg, transparent 46%, rgba(255,255,255,0.95) 49%, rgba(255,233,132,1) 50%, rgba(255,115,115,0.95) 51%, transparent 54%);
+    filter: drop-shadow(0 0 8px rgba(255,232,130,0.85)) drop-shadow(0 0 14px rgba(255,90,90,0.4));
+  }
+
+  .critical-burst.active {
+    opacity: 1;
+    animation: criticalBurstPulse 320ms ease-out;
+  }
+
+  .critical-burst.active::before {
+    animation: criticalRing 360ms ease-out;
+  }
+
+  .critical-burst.active::after {
+    animation: criticalCrossFlash 260ms ease-out;
+  }
+
+  .defeat-burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 6;
+    opacity: 0;
+    overflow: hidden;
+  }
+
+  .magic-video {
+    position: absolute;
+    inset: -10px;
+    width: calc(100% + 20px);
+    height: calc(100% + 20px);
+    object-fit: cover;
+    pointer-events: none;
+    z-index: 7;
+    opacity: 0;
+    mix-blend-mode: screen;
+    filter: saturate(1.15) brightness(1.1);
+  }
+
+  .magic-video.active {
+    animation: magicVideoPop 820ms ease-out;
+  }
+
+  .magic-video.glitter {
+    z-index: 8;
+    mix-blend-mode: screen;
+    filter: saturate(1.25) brightness(1.18);
+  }
+
+  .magic-video.glitter.active {
+    animation: magicVideoPop 900ms ease-out;
+  }
+
+  .defeat-burst::before,
+  .defeat-burst::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+
+  .defeat-burst::before {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 4px solid rgba(255,255,255,0.95);
+    box-shadow:
+      0 0 16px rgba(255,255,255,0.95),
+      0 0 30px rgba(255,222,120,0.65),
+      0 0 44px rgba(120,220,255,0.35);
+  }
+
+  .defeat-burst::after {
+    width: 210%;
+    height: 210%;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.95) 0 6%, rgba(255,225,120,0.85) 10%, rgba(255,255,255,0) 24%),
+      conic-gradient(from 0deg, rgba(255,255,255,0) 0 8%, rgba(255,240,180,0.9) 10%, rgba(255,255,255,0) 16%, rgba(255,120,120,0.75) 20%, rgba(255,255,255,0) 28%, rgba(120,220,255,0.65) 34%, rgba(255,255,255,0) 42%, rgba(255,240,180,0.9) 48%, rgba(255,255,255,0) 56%, rgba(255,120,120,0.75) 64%, rgba(255,255,255,0) 72%, rgba(120,220,255,0.65) 80%, rgba(255,255,255,0) 88%, rgba(255,240,180,0.9) 94%, rgba(255,255,255,0) 100%);
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.8));
+  }
+
+  .defeat-burst.active {
+    opacity: 1;
+    animation: defeatBurstGlow 700ms ease-out;
+  }
+
+  .defeat-burst.active::before {
+    animation: defeatRing 760ms ease-out;
+  }
+
+  .defeat-burst.active::after {
+    animation: defeatStarBurst 620ms ease-out;
+  }
+
+  .fire-burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    overflow: hidden;
+    mix-blend-mode: screen;
+    filter: saturate(1.25);
+  }
+
+  .fire-burst::before,
+  .fire-burst::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+
+  .fire-burst::before {
+    width: 82%;
+    height: 96%;
+    background:
+      radial-gradient(circle at 50% 78%, rgba(255,248,205,0.98) 0 10%, rgba(255,218,92,0.95) 18%, rgba(255,153,54,0.92) 34%, rgba(255,90,38,0.88) 48%, rgba(236,35,24,0.78) 62%, rgba(236,35,24,0) 80%),
+      radial-gradient(ellipse at 38% 62%, rgba(255,193,74,0.85) 0 18%, rgba(255,92,38,0) 46%),
+      radial-gradient(ellipse at 62% 58%, rgba(255,205,90,0.82) 0 15%, rgba(255,92,38,0) 42%),
+      radial-gradient(ellipse at 50% 30%, rgba(255,235,150,0.65) 0 10%, rgba(255,120,50,0) 34%);
+    filter: blur(0.6px) drop-shadow(0 0 16px rgba(255,150,50,0.98)) drop-shadow(0 0 38px rgba(255,60,30,0.7));
+    border-radius: 45% 45% 38% 38%;
+  }
+
+  .fire-burst::after {
+    width: 230%;
+    height: 180%;
+    background:
+      radial-gradient(circle at 50% 55%, rgba(255,248,210,0.95) 0 5%, rgba(255,182,70,0.88) 8%, rgba(255,90,30,0.45) 16%, rgba(255,90,30,0) 26%),
+      radial-gradient(circle at 28% 68%, rgba(255,190,78,0.98) 0 6%, rgba(255,130,60,0.55) 9%, rgba(255,110,40,0) 16%),
+      radial-gradient(circle at 38% 46%, rgba(255,238,170,0.95) 0 6%, rgba(255,132,44,0.6) 10%, rgba(255,110,40,0) 18%),
+      radial-gradient(circle at 52% 38%, rgba(255,245,190,0.95) 0 6%, rgba(255,150,50,0.55) 10%, rgba(255,110,40,0) 19%),
+      radial-gradient(circle at 66% 47%, rgba(255,235,160,0.95) 0 6%, rgba(255,132,44,0.6) 10%, rgba(255,110,40,0) 18%),
+      radial-gradient(circle at 78% 66%, rgba(255,190,78,0.95) 0 6%, rgba(255,130,60,0.55) 9%, rgba(255,110,40,0) 16%),
+      conic-gradient(from 0deg at 50% 58%, rgba(255,255,255,0) 0 8%, rgba(255,230,160,0.8) 10%, rgba(255,255,255,0) 16%, rgba(255,120,60,0.72) 21%, rgba(255,255,255,0) 29%, rgba(255,220,140,0.78) 36%, rgba(255,255,255,0) 44%, rgba(255,120,60,0.68) 52%, rgba(255,255,255,0) 60%, rgba(255,220,140,0.78) 68%, rgba(255,255,255,0) 76%, rgba(255,120,60,0.68) 84%, rgba(255,255,255,0) 92%, rgba(255,230,160,0.8) 96%, rgba(255,255,255,0) 100%);
+    filter: drop-shadow(0 0 12px rgba(255,145,50,0.98)) drop-shadow(0 0 28px rgba(255,70,30,0.65));
+  }
+
+  .fire-burst {
+    background:
+      radial-gradient(circle at 50% 62%, rgba(255,120,40,0.18) 0 18%, rgba(255,50,20,0) 38%),
+      radial-gradient(circle at 50% 56%, rgba(255,220,120,0.12) 0 10%, rgba(255,150,70,0) 24%);
+  }
+
+  .fire-burst.active {
+    opacity: 1;
+    animation: fireBurstGlow 720ms ease-out;
+  }
+
+  .fire-burst.active::before {
+    animation: fireColumn 720ms ease-out;
+  }
+
+  .fire-burst.active::after {
+    animation: fireSparks 620ms ease-out;
+  }
+
+  .sprite-wrap::after {
+    content: "";
+    position: absolute;
+    bottom: 12px;
+    width: 110px;
+    height: 20px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 50%;
+    filter: blur(2px);
+  }
+
+  .sprite {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    image-rendering: auto;
+    transform: translateZ(0);
+  }
+
+  .hero {
+    border-radius: 30px;
+    background:
+      radial-gradient(circle at 50% 17%, #ffe0cb 0 13px, #f2b18f 14px 15px, transparent 16px),
+      radial-gradient(circle at 44% 16%, #2b1c28 0 1.7px, transparent 2px),
+      radial-gradient(circle at 56% 16%, #2b1c28 0 1.7px, transparent 2px),
+      radial-gradient(ellipse at 50% 21%, #ffb8d8 0 4px, transparent 5px),
+      radial-gradient(ellipse at 50% 32%, #ffd8ea 0 9px, transparent 10px),
+      radial-gradient(ellipse at 50% 41%, #ffffff 0 10px, transparent 11px),
+      radial-gradient(ellipse at 50% 44%, #ff71b8 0 22px, transparent 23px),
+      radial-gradient(circle at 38% 44%, #fff5a8 0 4px, transparent 5px),
+      radial-gradient(circle at 62% 44%, #fff5a8 0 4px, transparent 5px),
+      linear-gradient(180deg, transparent 0 45%, #ff8bcb 45% 49%, transparent 50%),
+      radial-gradient(ellipse at 50% 58%, #7fd0ff 0 21px, transparent 22px),
+      radial-gradient(ellipse at 50% 59%, #4aa1ef 0 16px, transparent 17px),
+      radial-gradient(ellipse at 39% 61%, #ffffff 0 7px, transparent 8px),
+      radial-gradient(ellipse at 61% 61%, #ffffff 0 7px, transparent 8px),
+      radial-gradient(ellipse at 50% 67%, #fff6ff 0 19px, transparent 20px),
+      radial-gradient(ellipse at 50% 73%, #ffd6f1 0 16px, transparent 17px),
+      radial-gradient(ellipse at 44% 79%, #ffffff 0 8px, transparent 9px),
+      radial-gradient(ellipse at 56% 79%, #ffffff 0 8px, transparent 9px),
+      radial-gradient(ellipse at 44% 88%, #f6a0c4 0 8px, transparent 9px),
+      radial-gradient(ellipse at 56% 88%, #f6a0c4 0 8px, transparent 9px),
+      radial-gradient(ellipse at 44% 92%, #c17a57 0 6px, transparent 7px),
+      radial-gradient(ellipse at 56% 92%, #c17a57 0 6px, transparent 7px);
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.28)) drop-shadow(0 0 12px rgba(255,170,220,0.18));
+  }
+
+  .hero::before,
+  .hero::after,
+  .monster::before,
+  .monster::after {
+    content: "";
+    position: absolute;
+    image-rendering: auto;
+  }
+
+  .hero::before {
+    left: 16px;
+    top: -2px;
+    width: 88px;
+    height: 64px;
+    border-radius: 40px 40px 28px 28px;
+    background:
+      radial-gradient(circle at 18% 62%, #ff8fc7 0 8px, transparent 9px),
+      radial-gradient(circle at 82% 62%, #ff8fc7 0 8px, transparent 9px),
+      radial-gradient(circle at 50% 28%, #fff2fa 0 8px, transparent 9px),
+      radial-gradient(ellipse at 18% 88%, #ff6fb7 0 14px, transparent 15px),
+      radial-gradient(ellipse at 82% 88%, #ff6fb7 0 14px, transparent 15px),
+      linear-gradient(180deg, #ff9bd0 0 36%, #ef63b1 37% 66%, #8e4ab0 67% 100%);
+    box-shadow:
+      inset 0 -10px 12px rgba(88,35,84,0.28),
+      0 4px 0 rgba(255,255,255,0.14);
+  }
+
+  .hero::after {
+    width: 20px;
+    height: 78px;
+    right: 14px;
+    top: 28px;
+    border-radius: 12px;
+    background:
+      radial-gradient(circle at 50% 10%, #fff6c0 0 6px, #ffd95f 7px 10px, transparent 11px),
+      radial-gradient(circle at 50% 20%, #ffffff 0 4px, transparent 5px),
+      linear-gradient(180deg, transparent 0 18%, #ffe470 18% 28%, #9bd9ff 29% 86%, #f7fbff 87% 100%);
+    box-shadow:
+      inset 0 0 0 2px rgba(255,255,255,0.45),
+      0 0 12px rgba(140,215,255,0.45),
+      0 0 16px rgba(255,222,120,0.22);
+    transform: rotate(16deg);
+  }
+
+  .monster {
+    border-radius: 28px;
+    background: transparent;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.25));
+  }
+
+  .monster::before {
+    inset: 0;
+  }
+
+  .monster::after {
+    inset: 0;
+  }
+
+  .monster.slime {
+    background:
+      radial-gradient(circle at 38% 41%, #ffffff 0 4px, #1f2631 5px 6px, transparent 7px),
+      radial-gradient(circle at 62% 41%, #ffffff 0 4px, #1f2631 5px 6px, transparent 7px),
+      radial-gradient(ellipse at 50% 66%, rgba(255,255,255,0.95) 0 9px, rgba(255,255,255,0) 10px),
+      radial-gradient(ellipse at 50% 58%, #7de7ff 0 36px, #3db5e5 37px 46px, transparent 47px),
+      radial-gradient(ellipse at 50% 72%, #2a86b9 0 22px, transparent 23px);
+  }
+
+  .monster.slime::before {
+    left: 22px;
+    right: 22px;
+    top: 28px;
+    bottom: 18px;
+    border-radius: 50% 50% 42% 42%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0));
+  }
+
+  .monster.slime::after {
+    left: 46px;
+    top: 62px;
+    width: 28px;
+    height: 8px;
+    border-radius: 8px;
+    background: #204768;
+    opacity: 0.7;
+  }
+
+  .monster.wolf {
+    background:
+      radial-gradient(circle at 44% 42%, #fff 0 4px, #1f232d 5px 6px, transparent 7px),
+      radial-gradient(circle at 63% 43%, #fff 0 4px, #1f232d 5px 6px, transparent 7px),
+      radial-gradient(circle at 54% 55%, #2d2020 0 5px, #e26f5b 6px 9px, transparent 10px),
+      radial-gradient(ellipse at 52% 58%, #b3d06b 0 32px, #79983e 33px 45px, transparent 46px),
+      radial-gradient(ellipse at 52% 72%, #59702f 0 20px, transparent 21px);
+  }
+
+  .monster.wolf::before {
+    left: 22px;
+    top: 14px;
+    width: 34px;
+    height: 26px;
+    background: linear-gradient(180deg, #a4c45c, #648032);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    transform: rotate(-12deg);
+    box-shadow: 46px 2px 0 0 #89aa47;
+  }
+
+  .monster.wolf::after {
+    left: 18px;
+    top: 62px;
+    width: 84px;
+    height: 22px;
+    border-radius: 14px;
+    background:
+      radial-gradient(circle at 12% 50%, #4d2c1c 0 4px, transparent 5px),
+      radial-gradient(circle at 88% 50%, #4d2c1c 0 4px, transparent 5px),
+      linear-gradient(180deg, #6c8c38, #4c6429);
+    opacity: 0.9;
+  }
+
+  .monster.golem {
+    background:
+      radial-gradient(circle at 42% 38%, #ffde8a 0 5px, #6f5312 6px 8px, transparent 9px),
+      radial-gradient(circle at 60% 38%, #ffde8a 0 5px, #6f5312 6px 8px, transparent 9px),
+      linear-gradient(180deg, transparent 0 24%, #a8a9ae 24% 74%, transparent 75%),
+      linear-gradient(90deg, transparent 0 20%, #8d8f96 20% 80%, transparent 81%),
+      radial-gradient(ellipse at 50% 72%, #6e727d 0 22px, transparent 23px);
+  }
+
+  .monster.golem::before {
+    left: 18px;
+    top: 22px;
+    width: 84px;
+    height: 58px;
+    border-radius: 14px;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,0.14) 0 3%, transparent 3% 20%, rgba(255,255,255,0.12) 20% 23%, transparent 23% 48%, rgba(255,255,255,0.1) 48% 51%, transparent 51% 74%, rgba(255,255,255,0.08) 74% 77%, transparent 77% 100%),
+      linear-gradient(180deg, #b5b7bd, #7d8089);
+    box-shadow: inset 0 0 0 2px #5f626b;
+  }
+
+  .monster.golem::after {
+    left: 39px;
+    top: 58px;
+    width: 42px;
+    height: 10px;
+    border-radius: 8px;
+    background: #545861;
+  }
+
+  .monster.bat {
+    background:
+      radial-gradient(circle at 42% 42%, #ff7d8f 0 5px, #311920 6px 8px, transparent 9px),
+      radial-gradient(circle at 60% 42%, #ff7d8f 0 5px, #311920 6px 8px, transparent 9px),
+      radial-gradient(ellipse at 51% 55%, #6f5adb 0 26px, #4331a4 27px 38px, transparent 39px),
+      radial-gradient(ellipse at 50% 72%, #2f2472 0 14px, transparent 15px);
+  }
+
+  .monster.bat::before {
+    left: 4px;
+    top: 30px;
+    width: 112px;
+    height: 48px;
+    background:
+      radial-gradient(ellipse at 20% 70%, #7a64e8 0 25px, transparent 26px),
+      radial-gradient(ellipse at 80% 70%, #7a64e8 0 25px, transparent 26px),
+      radial-gradient(ellipse at 20% 70%, #4e3ab3 0 16px, transparent 17px),
+      radial-gradient(ellipse at 80% 70%, #4e3ab3 0 16px, transparent 17px);
+    opacity: 0.95;
+  }
+
+  .monster.bat::after {
+    left: 38px;
+    top: 12px;
+    width: 42px;
+    height: 22px;
+    background:
+      linear-gradient(135deg, transparent 30%, #7f67ee 31% 55%, transparent 56%),
+      linear-gradient(45deg, transparent 30%, #7f67ee 31% 55%, transparent 56%);
+    opacity: 0.9;
+  }
+
+  .monster.boss {
+    background:
+      radial-gradient(circle at 41% 36%, #ff7272 0 6px, #2b0f14 7px 9px, transparent 10px),
+      radial-gradient(circle at 63% 36%, #ff7272 0 6px, #2b0f14 7px 9px, transparent 10px),
+      radial-gradient(ellipse at 52% 52%, #2d2f3f 0 34px, #171923 35px 46px, transparent 47px),
+      radial-gradient(ellipse at 50% 76%, #5f1031 0 18px, transparent 19px),
+      radial-gradient(ellipse at 50% 88%, #3f071e 0 12px, transparent 13px);
+  }
+
+  .monster.boss::before {
+    left: 10px;
+    top: 4px;
+    width: 100px;
+    height: 48px;
+    background:
+      radial-gradient(ellipse at 18% 90%, #7e123e 0 14px, transparent 15px),
+      radial-gradient(ellipse at 82% 90%, #7e123e 0 14px, transparent 15px),
+      linear-gradient(135deg, transparent 32%, #b72059 33% 46%, transparent 47%),
+      linear-gradient(45deg, transparent 32%, #b72059 33% 46%, transparent 47%);
+    opacity: 0.95;
+  }
+
+  .monster.boss::after {
+    left: 20px;
+    top: 48px;
+    width: 82px;
+    height: 54px;
+    border-radius: 42px 42px 24px 24px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 30%),
+      linear-gradient(180deg, #8d1546, #4f0c2a 65%, #2e0719);
+    box-shadow: inset 0 0 0 2px rgba(255,90,130,0.22);
+  }
+
+  /* 個別PNG敵スプライト（透明背景） */
+  .monster.sheet {
+    width: 150px;
+    height: 150px;
+    border-radius: 0;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: contain;
+    background-color: transparent;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.32));
+  }
+
+  .monster.sheet.hit,
+  .monster.sheet.hit.critical-hit,
+  .monster.sheet.hit.finisher-hit,
+  .monster.sheet.defeated,
+  .monster.sheet.fire-hit {
+    background-size: contain;
+  }
+
+  .monster.sheet-slime {
+    background-image: url('sansu_fantasy_enemy_5sprites_transparent/enemy_05_slime_golem_transparent.png');
+    background-position: center 52%;
+  }
+
+  .monster.sheet-goblin {
+    background-image: url('sansu_fantasy_enemy_5sprites_transparent/enemy_01_goblin_transparent.png');
+    background-position: center 52%;
+  }
+
+  .monster.sheet-bat {
+    background-image: url('sansu_fantasy_enemy_5sprites_transparent/enemy_02_bomb_bat_transparent.png');
+    background-position: center 46%;
+  }
+
+  .monster.sheet-mage {
+    background-image: url('sansu_fantasy_enemy_5sprites_transparent/enemy_04_wizard_cat_transparent.png');
+    background-position: center 54%;
+  }
+
+  .monster.sheet-boss {
+    width: 160px;
+    height: 160px;
+    background-image: url('sansu_fantasy_enemy_5sprites_transparent/enemy_03_ogre_transparent.png');
+    background-position: center 52%;
+    filter: drop-shadow(0 10px 14px rgba(0,0,0,0.36)) drop-shadow(0 0 12px rgba(255,120,120,0.12));
+  }
+
+  .monster.sheet::before,
+  .monster.sheet::after {
+    content: none;
+  }
+
+  .sprite.monster.hit {
+    animation: enemySpriteKnock 160ms steps(2, end);
+    filter: brightness(1.35) saturate(1.2);
+  }
+
+  .sprite.monster.hit.critical-hit {
+    animation: enemySpriteKnockCritical 280ms steps(4, end);
+    filter: brightness(1.75) saturate(1.5);
+  }
+
+  .sprite.monster.hit.finisher-hit {
+    animation: enemySpriteKnockFinisher 340ms steps(4, end);
+    filter: brightness(1.7) saturate(1.4);
+  }
+
+  .sprite.monster.defeated {
+    animation: enemyDefeatFade 1200ms ease-in forwards;
+  }
+
+  .sprite.monster.fire-hit {
+    animation: enemyFireHit 420ms ease-out;
+    filter: brightness(2.25) saturate(2) hue-rotate(-10deg);
+  }
+
+  .char-panel.enemy-defeated {
+    animation: enemyDefeatPanelFlash 1100ms ease-out;
+  }
+
+  .question-area {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .message-box {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 8px;
+  }
+
+  .message-line {
+    min-height: 22px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .question-text {
+    font-size: clamp(20px, 3vw, 28px);
+    color: #fff3b0;
+    letter-spacing: 1px;
+    min-height: 36px;
+  }
+
+  .timer-wrap {
+    display: grid;
+    gap: 5px;
+  }
+
+  .timer-label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .timer-bar {
+    height: 18px;
+    border: 2px solid var(--line-dark);
+    box-shadow: inset 0 0 0 2px #435867;
+    background: #0b1218;
+    overflow: hidden;
+  }
+
+  .timer-fill {
+    height: 100%;
+    width: 100%;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 10px, rgba(255,255,255,0) 10px 20px),
+      linear-gradient(90deg, #ffe07b, #ff8b52, #ff5b5b);
+    transform-origin: left center;
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-content: start;
+  }
+
+  .choice {
+    min-height: 52px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .choice-index {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border: 2px solid #0d141a;
+    box-shadow: inset 0 0 0 2px #5d7686;
+    background: #223747;
+    color: #fff3b0;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+
+  .battle-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .result-screen {
+    grid-template-rows: 1fr auto auto 1fr;
+    gap: 14px;
+    align-content: center;
+  }
+
+  .result-title {
+    text-align: center;
+    font-size: clamp(26px, 5vw, 40px);
+    margin: 0;
+    letter-spacing: 2px;
+    color: #fff3b0;
+    text-shadow: 2px 2px 0 #473800;
+  }
+
+  .result-box {
+    display: grid;
+    gap: 8px;
+    font-size: 15px;
+  }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 4px;
+  }
+
+  .small-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  @keyframes slashCutMain {
+    0% { opacity: 0; transform: translate(-18px, 14px) rotate(-20deg) scaleX(0.15); }
+    20% { opacity: 1; }
+    55% { opacity: 1; }
+    100% { opacity: 0; transform: translate(20px, -10px) rotate(-20deg) scaleX(1.1); }
+  }
+
+  @keyframes slashCutSub {
+    0% { opacity: 0; transform: translate(-10px, 10px) rotate(-28deg) scaleX(0.1); }
+    20% { opacity: 0.85; }
+    100% { opacity: 0; transform: translate(14px, -8px) rotate(-28deg) scaleX(0.9); }
+  }
+
+  @keyframes slashCutMainCritical {
+    0% { opacity: 0; transform: translate(-22px, 16px) rotate(-18deg) scaleX(0.12); height: 12px; }
+    18% { opacity: 1; }
+    60% { opacity: 1; }
+    100% { opacity: 0; transform: translate(26px, -14px) rotate(-18deg) scaleX(1.25); height: 12px; }
+  }
+
+  @keyframes slashCutSubCritical {
+    0% { opacity: 0; transform: translate(-14px, 11px) rotate(-30deg) scaleX(0.1); }
+    22% { opacity: 0.95; }
+    100% { opacity: 0; transform: translate(18px, -10px) rotate(-30deg) scaleX(1.05); }
+  }
+
+  @keyframes slashCutMainFinisher {
+    0% { opacity: 0; transform: translate(-30px, 20px) rotate(-17deg) scaleX(0.08); }
+    15% { opacity: 1; }
+    45% { opacity: 1; }
+    100% { opacity: 0; transform: translate(36px, -20px) rotate(-17deg) scaleX(1.45); }
+  }
+
+  @keyframes slashCutSubFinisher {
+    0% { opacity: 0; transform: translate(-24px, 16px) rotate(-33deg) scaleX(0.08); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translate(24px, -16px) rotate(-33deg) scaleX(1.2); }
+  }
+
+  @keyframes slashFlash {
+    0% { opacity: 0; }
+    25% { opacity: 0.95; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes slashFlashCritical {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    55% { opacity: 0.5; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes slashFlashFinisher {
+    0% { opacity: 0; }
+    16% { opacity: 1; }
+    35% { opacity: 0.75; }
+    48% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes criticalRing {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.15); }
+    20% { opacity: 1; }
+    70% { opacity: 0.85; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(4.2); }
+  }
+
+  @keyframes criticalCrossFlash {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.25) rotate(0deg); }
+    18% { opacity: 1; }
+    45% { opacity: 0.95; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.15) rotate(4deg); }
+  }
+
+  @keyframes criticalBurstPulse {
+    0% { filter: brightness(1); }
+    20% { filter: brightness(1.55); }
+    100% { filter: brightness(1); }
+  }
+
+  @keyframes defeatRing {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+    15% { opacity: 1; }
+    55% { opacity: 0.95; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(5.8); }
+  }
+
+  @keyframes defeatStarBurst {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.15) rotate(0deg); }
+    20% { opacity: 1; }
+    50% { opacity: 0.95; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35) rotate(40deg); }
+  }
+
+  @keyframes defeatBurstGlow {
+    0% { filter: brightness(1); }
+    18% { filter: brightness(2); }
+    100% { filter: brightness(1); }
+  }
+
+  @keyframes fireColumn {
+    0% { opacity: 0; transform: translate(-50%, -40%) scale(0.28, 0.18); }
+    12% { opacity: 1; }
+    35% { opacity: 1; transform: translate(-50%, -52%) scale(0.95, 1.05); }
+    58% { opacity: 1; transform: translate(-50%, -58%) scale(1.15, 1.35); }
+    78% { opacity: 0.92; transform: translate(-50%, -63%) scale(1.26, 1.52); }
+    100% { opacity: 0; transform: translate(-50%, -72%) scale(1.45, 1.8); }
+  }
+
+  @keyframes fireSparks {
+    0% { opacity: 0; transform: translate(-50%, -44%) scale(0.25) rotate(0deg); }
+    14% { opacity: 1; }
+    45% { opacity: 1; transform: translate(-50%, -52%) scale(0.95) rotate(8deg); }
+    100% { opacity: 0; transform: translate(-50%, -66%) scale(1.28) rotate(22deg); }
+  }
+
+  @keyframes fireBurstGlow {
+    0% { filter: brightness(1); }
+    18% { filter: brightness(2.2); }
+    34% { filter: brightness(1.5); }
+    52% { filter: brightness(2.05); }
+    66% { filter: brightness(1.45); }
+    100% { filter: brightness(1); }
+  }
+
+  @keyframes enemyHitShake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+  }
+
+  @keyframes enemyHitShakeCritical {
+    0% { transform: translateX(0) scale(1); }
+    15% { transform: translateX(-10px) scale(1.01); }
+    30% { transform: translateX(12px) scale(1.02); }
+    45% { transform: translateX(-9px) scale(1); }
+    60% { transform: translateX(10px) scale(1.01); }
+    75% { transform: translateX(-6px) scale(1); }
+    100% { transform: translateX(0) scale(1); }
+  }
+
+  @keyframes enemyHitShakeFinisher {
+    0% { transform: translateX(0) translateY(0); }
+    15% { transform: translateX(-8px) translateY(-2px); }
+    30% { transform: translateX(10px) translateY(2px); }
+    45% { transform: translateX(-7px) translateY(-1px); }
+    60% { transform: translateX(8px) translateY(1px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+  }
+
+  @keyframes enemySpriteKnock {
+    0% { transform: translate(0, 0); }
+    30% { transform: translate(6px, -3px); }
+    70% { transform: translate(2px, -1px); }
+    100% { transform: translate(0, 0); }
+  }
+
+  @keyframes enemySpriteKnockCritical {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    20% { transform: translate(12px, -6px) scale(1.08); opacity: 1; }
+    38% { transform: translate(-4px, 2px) scale(0.95); opacity: 0.85; }
+    60% { transform: translate(8px, -3px) scale(1.03); opacity: 1; }
+    100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  }
+
+  @keyframes enemySpriteKnockFinisher {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    25% { transform: translate(10px, -6px) scale(1.05); opacity: 1; }
+    50% { transform: translate(4px, -2px) scale(0.96); opacity: 0.85; }
+    70% { transform: translate(7px, -4px) scale(1.02); opacity: 1; }
+    100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  }
+
+  @keyframes enemyDefeatFade {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); filter: brightness(1.8) saturate(1.5); }
+    18% { opacity: 1; transform: translate(2px, -1px) scale(1.03); filter: brightness(2.15) saturate(1.9); }
+    45% { opacity: 0.95; transform: translate(0, -3px) scale(1.07); filter: brightness(2.35) saturate(0.8); }
+    72% { opacity: 0.55; transform: translate(0, -8px) scale(1.13); filter: brightness(2.65) saturate(0.15); }
+    100% { opacity: 0; transform: translate(0, -18px) scale(1.23); filter: brightness(3.1) saturate(0); }
+  }
+
+  @keyframes enemyDefeatPanelFlash {
+    0% { box-shadow: inset 0 0 0 2px #5a7485, inset 0 0 0 4px rgba(255,255,255,0.05); }
+    20% { box-shadow: inset 0 0 0 2px #ffd36a, inset 0 0 30px rgba(255,255,255,0.45), inset 0 0 0 4px rgba(255,255,255,0.25); }
+    55% { box-shadow: inset 0 0 0 2px #ffeaa6, inset 0 0 18px rgba(255,230,140,0.26), inset 0 0 0 4px rgba(255,255,255,0.12); }
+    100% { box-shadow: inset 0 0 0 2px #5a7485, inset 0 0 0 4px rgba(255,255,255,0.05); }
+  }
+
+  @keyframes enemyFireHit {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    15% { transform: translate(2px, -1px) scale(1.04); opacity: 1; }
+    38% { transform: translate(-1px, 0) scale(0.98); opacity: 0.92; }
+    65% { transform: translate(2px, -2px) scale(1.03); opacity: 1; }
+    100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  }
+
+  @keyframes magicVideoPop {
+    0% { opacity: 0; transform: scale(0.92); }
+    8% { opacity: 1; transform: scale(1); }
+    65% { opacity: 1; transform: scale(1.03); }
+    100% { opacity: 0; transform: scale(1.06); }
+  }
+
+  @keyframes stagePulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.04); }
+  }
+
+  @media (max-width: 760px) {
+    .frame { min-height: auto; }
+    .difficulty-grid { grid-template-columns: 1fr; }
+    .hero-select-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .map-board { min-height: auto; padding: 8px; }
+    .map-canvas { min-height: 560px; }
+    .hud, .arena, .question-area { grid-template-columns: 1fr; }
+    .char-panel { min-height: 180px; }
+    .choices { grid-template-columns: 1fr; }
+    .battle-footer { flex-direction: column; align-items: flex-start; }
+    .map-footer { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <main class="frame" aria-live="polite">
+      <section id="screen-title" class="screen title-screen active" aria-label="タイトル画面">
+        <div></div>
+        <div class="panel title-box">
+          <h1 class="title-main">算数ファンタジー</h1>
+          <p class="title-sub">5びょういないに こたえて モンスターを たおそう！</p>
+        </div>
+        <div class="panel">
+          <div style="margin-bottom:10px; color:#fff3b0; letter-spacing:1px;">むずかしさを えらんで ステージマップへ</div>
+          <div class="difficulty-grid">
+            <button class="pixel-btn easy" data-difficulty="easy">かんたん</button>
+            <button class="pixel-btn normal" data-difficulty="normal">ふつう</button>
+            <button class="pixel-btn hard" data-difficulty="hard">むずかしい</button>
+          </div>
+          <div style="margin-top:10px; color:#fff3b0; letter-spacing:1px;">キャラクターを えらぶ（はじめは 00 のみ）</div>
+          <div id="hero-select-grid" class="hero-select-grid"></div>
+          <div id="hero-select-note" class="small-note" style="text-align:left; margin-top:4px;">えらんだキャラ: 00</div>
+          <button id="reset-heroes-btn" class="pixel-btn secondary-btn" style="margin-top:8px;">キャラ解放をリセット</button>
+        </div>
+        <div class="small-note">4たくクイズ / 5びょうで てきのこうげき / ステージをクリアして次を解放</div>
+      </section>
+
+      <section id="screen-map" class="screen map-screen" aria-label="マップ画面">
+        <div class="panel map-header">
+          <h2 class="map-title">ぼうけんマップ</h2>
+          <p id="map-difficulty-text" class="map-sub">むずかしさ: ふつう</p>
+          <p class="map-sub">ステージを えらんで しゅっぱつ！ クリアで つぎのどうくつが ひらく</p>
+        </div>
+
+        <div class="panel map-board">
+          <div class="map-canvas">
+            <div class="map-toolbar" aria-hidden="true">
+              <div class="map-toolbar-left">
+                <div class="map-icon">MAP</div>
+                <div class="map-icon run">GO!</div>
+              </div>
+              <div class="map-icon back">◀ BACK</div>
+            </div>
+            <div class="map-sea"></div>
+            <div class="map-river"></div>
+            <div class="map-hills"></div>
+            <div class="map-town"></div>
+            <div class="map-gate"></div>
+            <div class="map-path" aria-hidden="true">
+              <svg id="map-path-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+            </div>
+            <div id="stage-grid" class="stage-grid"></div>
+          </div>
+        </div>
+
+        <div class="panel map-footer">
+          <div id="map-progress-text">解放: 1 / 5</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="map-reset-stages-btn" class="pixel-btn">ステージ進行をリセット</button>
+            <button id="map-back-title-btn" class="pixel-btn">タイトルへ もどる</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-battle" class="screen battle-screen" aria-label="バトル画面">
+        <div class="hud">
+          <div class="panel status">
+            <h3>ゆうしゃ</h3>
+            <div class="status-row"><span>HP</span><span id="player-hp-text">100 / 100</span></div>
+            <div class="hp-bar"><div id="player-hp-fill" class="hp-fill"></div></div>
+          </div>
+          <div class="panel status">
+            <h3 id="enemy-name-hud">スライムまおう</h3>
+            <div class="status-row"><span>HP</span><span id="enemy-hp-text">100 / 100</span></div>
+            <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+          </div>
+        </div>
+
+        <div class="arena">
+          <div class="panel char-panel">
+            <div class="char-name">ゆうしゃ</div>
+            <div class="sprite-wrap">
+              <img id="hero-image" class="hero-image" src="hiro.png" alt="主人公" />
+              <div id="hero-magic-overlay" class="hero-magic-overlay" aria-hidden="true"></div>
+            </div>
+          </div>
+          <div id="enemy-char-panel" class="panel char-panel">
+            <div id="enemy-name-arena" class="char-name">スライムまおう</div>
+            <div class="sprite-wrap">
+            <div id="enemy-sprite" class="sprite monster" aria-hidden="true"></div>
+            </div>
+            <div id="enemy-slash-flash" class="slash-flash" aria-hidden="true"></div>
+            <div id="enemy-slash-layer" class="slash-layer" aria-hidden="true"></div>
+            <div id="enemy-critical-burst" class="critical-burst" aria-hidden="true"></div>
+            <div id="enemy-fire-burst" class="fire-burst" aria-hidden="true"></div>
+            <img id="enemy-magic-video" class="magic-video" src="magic/begirama_like_preview.gif" alt="" aria-hidden="true" />
+            <img id="enemy-magic2-video" class="magic-video glitter" src="magic2/magic_glitter_burst_preview.gif" alt="" aria-hidden="true" />
+            <div id="enemy-defeat-burst" class="defeat-burst" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="question-area">
+          <div class="panel message-box">
+            <div id="battle-message" class="message-line">モンスターが あらわれた！</div>
+            <div id="question-text" class="question-text">しばらくおまちください...</div>
+            <div class="timer-wrap">
+              <div class="timer-label"><span>てきのこうげきまで</span><span id="timer-text">5.0s</span></div>
+              <div class="timer-bar"><div id="timer-fill" class="timer-fill"></div></div>
+            </div>
+          </div>
+
+          <div class="panel choices" id="choices"></div>
+        </div>
+
+        <div class="panel battle-footer">
+          <div id="battle-meta">むずかしさ: ふつう</div>
+          <div id="battle-score">せいかい: 0 / 0</div>
+        </div>
+      </section>
+
+      <section id="screen-result" class="screen result-screen" aria-label="結果画面">
+        <div></div>
+        <div class="panel">
+          <h2 id="result-title" class="result-title">しょうり！</h2>
+        </div>
+        <div class="panel result-box">
+          <div class="result-row"><span>むずかしさ</span><span id="result-difficulty">-</span></div>
+          <div class="result-row"><span>せいかい数</span><span id="result-correct">0</span></div>
+          <div class="result-row"><span>もんだい数</span><span id="result-total">0</span></div>
+          <div class="result-row"><span>せいかい率</span><span id="result-accuracy">0%</span></div>
+          <div class="result-row"><span>けっか</span><span id="result-summary">-</span></div>
+        </div>
+        <div class="panel" style="display:grid; gap:10px;">
+          <button id="retry-btn" class="pixel-btn">次のステージへ</button>
+          <button id="back-title-btn" class="pixel-btn">マップへ もどる</button>
+          <div id="gacha-panel" class="gacha-panel" style="display:none;">
+            <button id="gacha-btn" class="pixel-btn">ガチャ画面へ</button>
+            <div id="gacha-note-result" class="gacha-note">ゲームクリアで新キャラ解放のチャンス！</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-gacha" class="screen gacha-screen" aria-label="ガチャ画面">
+        <div class="panel">
+          <h2 class="result-title" style="margin:0;">ドキドキ ガチャ</h2>
+          <p id="gacha-sub" class="gacha-sub">きらめくクリスタルから なかまを しょうかん！</p>
+        </div>
+        <div class="panel" style="display:grid; gap:10px;">
+          <div id="gacha-cutin" class="gacha-cutin" aria-hidden="true">
+            <div id="gacha-motion" class="gacha-motion" aria-label="ガチャモーション"></div>
+            <div id="gacha-rarity" class="gacha-rarity" aria-live="polite"></div>
+            <img id="gacha-reveal-image" class="gacha-reveal-image" alt="ガチャで出たキャラクター">
+          </div>
+        </div>
+        <div class="panel" style="display:grid; gap:10px;">
+          <button id="gacha-close-btn" class="pixel-btn">マップへ もどる</button>
+          <div id="gacha-note-gacha" class="gacha-note">ゲームクリアで新キャラ解放のチャンス！</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script src="src/data/game-data.js"></script>
+<script src="src/domain/questions.js"></script>
+<script src="src/domain/battle.js"></script>
+<script src="src/infrastructure/persistence.js"></script>
+<script src="src/application/state-machine.js"></script>
+<script src="src/application/game-store.js"></script>
+<script>
+(() => {
+  const {
+    MAX_HP,
+    CRITICAL_DAMAGE_CAP,
+    QUESTION_LIMIT_MS,
+    STAGE_COUNT,
+    STORAGE_KEY,
+    HERO_STORAGE_KEY,
+    DIFFICULTY_STATS,
+    HEROES,
+    STAGES,
+    STAGE_POSITIONS
+  } = window.SF.data;
+
+  const DIFFICULTIES = {
+    easy: { ...DIFFICULTY_STATS.easy, generator: generateEasy },
+    normal: { ...DIFFICULTY_STATS.normal, generator: generateNormal },
+    hard: { ...DIFFICULTY_STATS.hard, generator: generateHard }
+  };
+
+  const screenMachine = window.SF.stateMachine.createScreenStateMachine('title', {
+    title: ['map'],
+    map: ['title', 'battle'],
+    battle: ['result'],
+    result: ['map', 'battle', 'gacha'],
+    gacha: ['result', 'map']
+  });
+
+  const els = {
+    screens: {
+      title: document.getElementById('screen-title'),
+      map: document.getElementById('screen-map'),
+      battle: document.getElementById('screen-battle'),
+      result: document.getElementById('screen-result'),
+      gacha: document.getElementById('screen-gacha')
+    },
+    difficultyButtons: [...document.querySelectorAll('[data-difficulty]')],
+    heroSelectGrid: document.getElementById('hero-select-grid'),
+    heroSelectNote: document.getElementById('hero-select-note'),
+    resetHeroesBtn: document.getElementById('reset-heroes-btn'),
+    mapDifficultyText: document.getElementById('map-difficulty-text'),
+    mapProgressText: document.getElementById('map-progress-text'),
+    stageGrid: document.getElementById('stage-grid'),
+    mapResetStagesBtn: document.getElementById('map-reset-stages-btn'),
+    mapBackTitleBtn: document.getElementById('map-back-title-btn'),
+    playerHpText: document.getElementById('player-hp-text'),
+    enemyHpText: document.getElementById('enemy-hp-text'),
+    playerHpFill: document.getElementById('player-hp-fill'),
+    enemyHpFill: document.getElementById('enemy-hp-fill'),
+    enemyCharPanel: document.getElementById('enemy-char-panel'),
+    enemySprite: document.getElementById('enemy-sprite'),
+    enemySlashFlash: document.getElementById('enemy-slash-flash'),
+    enemySlashLayer: document.getElementById('enemy-slash-layer'),
+    enemyCriticalBurst: document.getElementById('enemy-critical-burst'),
+    enemyFireBurst: document.getElementById('enemy-fire-burst'),
+    enemyMagicVideo: document.getElementById('enemy-magic-video'),
+    enemyMagic2Video: document.getElementById('enemy-magic2-video'),
+    enemyDefeatBurst: document.getElementById('enemy-defeat-burst'),
+    enemyNameHud: document.getElementById('enemy-name-hud'),
+    enemyNameArena: document.getElementById('enemy-name-arena'),
+    heroImage: document.getElementById('hero-image'),
+    heroMagicOverlay: document.getElementById('hero-magic-overlay'),
+    battleMessage: document.getElementById('battle-message'),
+    questionText: document.getElementById('question-text'),
+    timerText: document.getElementById('timer-text'),
+    timerFill: document.getElementById('timer-fill'),
+    choices: document.getElementById('choices'),
+    battleMeta: document.getElementById('battle-meta'),
+    battleScore: document.getElementById('battle-score'),
+    resultTitle: document.getElementById('result-title'),
+    resultDifficulty: document.getElementById('result-difficulty'),
+    resultCorrect: document.getElementById('result-correct'),
+    resultTotal: document.getElementById('result-total'),
+    resultAccuracy: document.getElementById('result-accuracy'),
+    resultSummary: document.getElementById('result-summary'),
+    retryBtn: document.getElementById('retry-btn'),
+    backTitleBtn: document.getElementById('back-title-btn'),
+    gachaPanel: document.getElementById('gacha-panel'),
+    gachaBtn: document.getElementById('gacha-btn'),
+    gachaSub: document.getElementById('gacha-sub'),
+    gachaCloseBtn: document.getElementById('gacha-close-btn'),
+    gachaCutin: document.getElementById('gacha-cutin'),
+    gachaMotion: document.getElementById('gacha-motion'),
+    gachaRarity: document.getElementById('gacha-rarity'),
+    gachaRevealImage: document.getElementById('gacha-reveal-image'),
+    gachaNoteResult: document.getElementById('gacha-note-result'),
+    gachaNoteGacha: document.getElementById('gacha-note-gacha')
+  };
+
+  const state = window.SF.gameStore.createInitialState();
+  state.playerHp = MAX_HP;
+  state.enemyHp = MAX_HP;
+
+  const audio = {
+    ctx: null,
+    master: null,
+    bgmStarted: false,
+    bgmTimer: null,
+    bgmStep: 0,
+    bgmMode: ''
+  };
+
+  const assetAudio = {
+    fireMagic: null,
+    glitterMagic: null
+  };
+
+  const heroVisualState = {
+    resetTimer: null
+  };
+
+  const GACHA_EGG_FRAMES = Array.from({ length: 24 }, (_, i) => {
+    const n = String(i + 1).padStart(2, '0');
+    return `gacha/sansu_fantasy_gacha_aligned_frame_${n}.png`;
+  });
+
+  function loadProgress() {
+    const loaded = window.SF.persistence.loadProgress({
+      storageKey: STORAGE_KEY,
+      heroStorageKey: HERO_STORAGE_KEY,
+      stageCount: STAGE_COUNT,
+      heroes: HEROES
+    });
+    state.unlockedStages = loaded.unlockedStages;
+    state.clearedStages = loaded.clearedStages;
+    state.unlockedHeroIds = loaded.unlockedHeroIds;
+    state.selectedHeroId = loaded.selectedHeroId;
+  }
+
+  function saveProgress() {
+    window.SF.persistence.saveProgress({
+      storageKey: STORAGE_KEY,
+      heroStorageKey: HERO_STORAGE_KEY,
+      unlockedStages: state.unlockedStages,
+      clearedStages: state.clearedStages,
+      unlockedHeroIds: state.unlockedHeroIds,
+      selectedHeroId: state.selectedHeroId
+    });
+  }
+
+  function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function ensureAudio() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!audio.ctx) {
+      audio.ctx = new AudioCtx();
+      audio.master = audio.ctx.createGain();
+      audio.master.gain.value = 0.2;
+      audio.master.connect(audio.ctx.destination);
+    }
+    if (audio.ctx.state === 'suspended') {
+      audio.ctx.resume().catch(() => {});
+    }
+    return audio.ctx;
+  }
+
+  function getFireMagicAudio() {
+    if (!assetAudio.fireMagic) {
+      const a = new Audio('magic/begirama_like_sfx_mono_44k.wav');
+      a.preload = 'auto';
+      assetAudio.fireMagic = a;
+    }
+    return assetAudio.fireMagic;
+  }
+
+  function getGlitterMagicAudio() {
+    if (!assetAudio.glitterMagic) {
+      const a = new Audio('magic2/magic_glitter_burst_sfx_stereo_44k.wav');
+      a.preload = 'auto';
+      assetAudio.glitterMagic = a;
+    }
+    return assetAudio.glitterMagic;
+  }
+
+  function midiToHz(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  function playTone(freq, when, dur, opts = {}) {
+    const ctx = ensureAudio();
+    if (!ctx || !audio.master || !freq) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const type = opts.type || 'square';
+    const volume = opts.volume ?? 0.08;
+    const attack = opts.attack ?? 0.005;
+    const release = opts.release ?? 0.04;
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, when);
+    if (opts.freqRampTo) {
+      osc.frequency.linearRampToValueAtTime(opts.freqRampTo, when + dur);
+    }
+
+    gain.gain.setValueAtTime(0.0001, when);
+    gain.gain.linearRampToValueAtTime(volume, when + attack);
+    gain.gain.setValueAtTime(volume, Math.max(when + attack, when + dur - release));
+    gain.gain.linearRampToValueAtTime(0.0001, when + dur);
+
+    osc.connect(gain);
+    gain.connect(audio.master);
+    osc.start(when);
+    osc.stop(when + dur + 0.02);
+  }
+
+  function playNoise(when, dur, volume = 0.05) {
+    const ctx = ensureAudio();
+    if (!ctx || !audio.master) return;
+    const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    }
+
+    const src = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    src.buffer = buffer;
+    filter.type = 'highpass';
+    filter.frequency.value = 700;
+    gain.gain.setValueAtTime(volume, when);
+    gain.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(audio.master);
+    src.start(when);
+    src.stop(when + dur + 0.01);
+  }
+
+  function startMapBgm() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    if (audio.bgmStarted && audio.bgmMode === 'map') return;
+    stopBgm();
+    audio.bgmStarted = true;
+    audio.bgmMode = 'map';
+    audio.bgmStep = 0;
+
+    // 8bit風のJRPGフィールドBGM（FF風の雰囲気を意識したオリジナル）
+    const leadPattern = [
+      76, 79, 81, 84, 81, 79, 76, 72,
+      74, 77, 79, 81, 79, 77, 74, 72,
+      71, 74, 76, 79, 76, 74, 71, 67,
+      69, 72, 74, 76, 74, 72, 69, 67
+    ];
+    const bassRoots = [48, 50, 47, 45, 48, 50, 52, 43];
+    const harmonyPattern = [
+      67, 71, 72, 76, 72, 71, 67, 64,
+      65, 69, 71, 72, 71, 69, 65, 64,
+      62, 65, 67, 71, 67, 65, 62, 59,
+      60, 64, 65, 67, 65, 64, 60, 57
+    ];
+    const arps = [
+      [60, 64, 67, 72],
+      [62, 65, 69, 74],
+      [59, 62, 67, 71],
+      [57, 60, 64, 69]
+    ];
+
+    const tickMs = 180;
+    audio.bgmTimer = setInterval(() => {
+      if (!audio.bgmStarted) return;
+      const now = ctx.currentTime + 0.01;
+      const step = audio.bgmStep % 32;
+      const chordIndex = Math.floor(step / 8) % arps.length;
+
+      const lead = leadPattern[step];
+      playTone(midiToHz(lead), now, 0.15, { type: 'square', volume: 0.035, attack: 0.002, release: 0.03 });
+      playTone(midiToHz(harmonyPattern[step]), now, 0.13, { type: 'square', volume: 0.018, attack: 0.002, release: 0.025 });
+
+      if (step % 2 === 0) {
+        const root = bassRoots[Math.floor(step / 4) % bassRoots.length];
+        playTone(midiToHz(root), now, 0.28, { type: 'triangle', volume: 0.05, attack: 0.003, release: 0.05 });
+        playTone(midiToHz(root + 12), now + 0.01, 0.18, { type: 'sine', volume: 0.012, attack: 0.01, release: 0.06 });
+      }
+
+      const arpNote = arps[chordIndex][step % 4];
+      playTone(midiToHz(arpNote), now + 0.02, 0.09, { type: 'triangle', volume: 0.013, attack: 0.002, release: 0.02 });
+
+      if (step % 4 === 2 || step % 8 === 6) {
+        const chord = arps[chordIndex];
+        chord.slice(0, 3).forEach((midi, i) => {
+          playTone(midiToHz(midi + 12), now + i * 0.01, 0.12, { type: 'square', volume: 0.014, attack: 0.002, release: 0.025 });
+        });
+      }
+
+      if (step % 2 === 1) {
+        playNoise(now, 0.03, 0.012);
+      }
+
+      audio.bgmStep += 1;
+    }, tickMs);
+  }
+
+  function startBattleBgm() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    if (audio.bgmStarted && audio.bgmMode === 'battle') return;
+    stopBgm();
+    audio.bgmStarted = true;
+    audio.bgmMode = 'battle';
+    audio.bgmStep = 0;
+
+    // 重厚で長めの16bit JRPG戦闘曲風（オリジナル）
+    // 128step loop: 4bar x 2セクション相当（少し長め）
+    const tickMs = 104;
+    const progRoots = [40, 43, 38, 35, 40, 45, 43, 47]; // 8 bars
+    const progTypes = ['min', 'min', 'min', 'maj', 'min', 'maj', 'min', 'maj'];
+    const leadMotifs = [
+      [76, 79, 83, 84, 83, 79, 76, 74, 76, 79, 83, 88, 86, 83, 79, 76],
+      [74, 76, 79, 83, 79, 76, 74, 71, 74, 76, 79, 84, 83, 79, 76, 74],
+      [79, 83, 86, 88, 86, 83, 79, 76, 79, 83, 86, 91, 88, 86, 83, 79],
+      [81, 84, 88, 91, 88, 84, 81, 79, 81, 84, 88, 93, 91, 88, 84, 81]
+    ];
+    const counterMotifs = [
+      [67, -1, 69, -1, 71, -1, 72, -1, 71, -1, 69, -1, 67, -1, 66, -1],
+      [65, -1, 67, -1, 69, -1, 71, -1, 69, -1, 67, -1, 65, -1, 64, -1]
+    ];
+
+    audio.bgmTimer = setInterval(() => {
+      if (!audio.bgmStarted) return;
+      const now = ctx.currentTime + 0.01;
+      const step = audio.bgmStep % 128;
+      const bar = Math.floor(step / 16);
+      const stepInBar = step % 16;
+      const root = progRoots[bar];
+      const isMinor = progTypes[bar] === 'min';
+      const chord = isMinor ? [root, root + 3, root + 7] : [root, root + 4, root + 7];
+      const leadBank = bar < 4 ? leadMotifs : [...leadMotifs].reverse();
+      const lead = leadBank[bar % leadBank.length][stepInBar];
+      const counter = counterMotifs[bar % 2][stepInBar];
+      const intensity = bar >= 4 ? 1.08 : 1;
+
+      // 主旋律（A/Bセクションで少し展開）
+      playTone(midiToHz(lead), now, 0.09, {
+        type: 'square',
+        volume: 0.03 * intensity,
+        attack: 0.0015,
+        release: 0.018
+      });
+      playTone(midiToHz(lead + 12), now + 0.01, 0.05, {
+        type: 'square',
+        volume: 0.011 * intensity,
+        attack: 0.001,
+        release: 0.012
+      });
+      if (stepInBar % 2 === 0) {
+        playTone(midiToHz(lead - 12), now + 0.025, 0.045, {
+          type: 'triangle',
+          volume: 0.014,
+          attack: 0.001,
+          release: 0.014
+        });
+      }
+
+      // ベース（刻み）+ ペダル
+      const bassSeq = [root, root, root + 7, root, root + 12, root + 7, root, root - 5];
+      const bassNote = bassSeq[Math.floor(stepInBar / 2) % bassSeq.length];
+      if (stepInBar % 2 === 0) {
+        playTone(midiToHz(bassNote), now, 0.14, { type: 'triangle', volume: 0.054, attack: 0.002, release: 0.025 });
+        playTone(midiToHz(root + 12), now, 0.18, { type: 'sine', volume: 0.01, attack: 0.004, release: 0.04 });
+      }
+
+      // ストリング/パッド風の支え（小節頭）
+      if (stepInBar === 0 || stepInBar === 8) {
+        chord.forEach((m, i) => {
+          playTone(midiToHz(m + 12 + (i === 0 ? 0 : 12)), now + i * 0.005, 0.42, {
+            type: i === 0 ? 'triangle' : 'sine',
+            volume: i === 0 ? 0.012 : 0.008,
+            attack: 0.02,
+            release: 0.08
+          });
+        });
+      }
+
+      // 速い刻みアルペジオ（チープ感を減らす伴奏層）
+      const arpPattern = [0, 2, 1, 2, 0, 2, 1, 2];
+      const arpIdx = arpPattern[stepInBar % 8];
+      playTone(midiToHz(chord[arpIdx] + 24), now + 0.018, 0.055, {
+        type: 'triangle',
+        volume: 0.012,
+        attack: 0.001,
+        release: 0.012
+      });
+
+      // 裏のブラススタブ風コード（セクション後半で強化）
+      if (stepInBar % 4 === 1 || (bar >= 4 && stepInBar % 4 === 3)) {
+        chord.forEach((m, i) => {
+          playTone(midiToHz(m + 24), now + i * 0.007, 0.05, {
+            type: 'square',
+            volume: (bar >= 4 ? 0.016 : 0.012) * (i === 1 ? 1 : 0.9),
+            attack: 0.001,
+            release: 0.01
+          });
+        });
+      }
+
+      // カウンターメロディ（後半中心）
+      if (bar >= 2 && counter > 0) {
+        playTone(midiToHz(counter + 12), now + 0.028, 0.04, {
+          type: 'square',
+          volume: bar >= 4 ? 0.011 : 0.008,
+          attack: 0.001,
+          release: 0.009
+        });
+      }
+
+      // 疑似ドラム（キック/スネア/ハイハット）
+      if (stepInBar % 4 === 0) {
+        playTone(midiToHz(30), now, 0.06, { type: 'sine', volume: 0.035, freqRampTo: midiToHz(22), attack: 0.001, release: 0.035 });
+        playNoise(now, 0.018, 0.006);
+      }
+      if (stepInBar % 4 === 2) {
+        playNoise(now + 0.005, 0.03, 0.012);
+      }
+      if (stepInBar % 2 === 1) {
+        playNoise(now + 0.045, 0.012, bar >= 4 ? 0.006 : 0.0045);
+      }
+      if (stepInBar === 14 || stepInBar === 15) {
+        playNoise(now + 0.02, 0.015, 0.008);
+      }
+
+      audio.bgmStep += 1;
+    }, tickMs);
+  }
+
+  function stopBgm() {
+    audio.bgmStarted = false;
+    audio.bgmMode = '';
+    if (audio.bgmTimer) {
+      clearInterval(audio.bgmTimer);
+      audio.bgmTimer = null;
+    }
+  }
+
+  function playCorrectSfx() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const t = ctx.currentTime + 0.005;
+    playTone(midiToHz(72), t, 0.07, { type: 'square', volume: 0.07 });
+    playTone(midiToHz(79), t + 0.055, 0.08, { type: 'square', volume: 0.075 });
+    playTone(midiToHz(84), t + 0.11, 0.12, { type: 'square', volume: 0.09 });
+    playTone(midiToHz(96), t + 0.11, 0.13, { type: 'triangle', volume: 0.04, freqRampTo: midiToHz(88) });
+  }
+
+  function playCriticalSfx(mode = 'slash') {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const t = ctx.currentTime + 0.005;
+    const CRITICAL_SFX_GAIN = 0.1125;
+    const tone = (freq, when, dur, opts = {}) => {
+      const base = Number.isFinite(opts.volume) ? opts.volume : 0.08;
+      playTone(freq, when, dur, { ...opts, volume: base * CRITICAL_SFX_GAIN });
+    };
+    const noise = (when, dur, vol = 0.05) => {
+      playNoise(when, dur, vol * CRITICAL_SFX_GAIN);
+    };
+    if (mode === 'fire') {
+      // まず素材SEを使う（失敗時は下の合成音でフォールバック）
+      try {
+        const fireAudio = getFireMagicAudio();
+        fireAudio.pause();
+        fireAudio.currentTime = 0;
+        fireAudio.volume = 0.155;
+        fireAudio.play().catch(() => {});
+      } catch (_) {}
+
+      // 炎の魔法風の会心SE（着火→炎柱→爆発）
+      // 着火の唸り
+      tone(midiToHz(62), t, 0.16, { type: 'sawtooth', volume: 0.06, freqRampTo: midiToHz(98), release: 0.07 });
+      tone(midiToHz(69), t + 0.02, 0.18, { type: 'sawtooth', volume: 0.065, freqRampTo: midiToHz(108), release: 0.08 });
+      tone(midiToHz(74), t + 0.05, 0.16, { type: 'triangle', volume: 0.035, freqRampTo: midiToHz(96), release: 0.06 });
+
+      // 炎柱の燃焼ノイズ
+      noise(t + 0.03, 0.09, 0.028);
+      noise(t + 0.085, 0.1, 0.025);
+      noise(t + 0.15, 0.08, 0.019);
+
+      // 爆発の芯（低音インパクト）
+      tone(midiToHz(46), t + 0.12, 0.22, { type: 'sawtooth', volume: 0.095, freqRampTo: midiToHz(26), release: 0.14 });
+      tone(midiToHz(34), t + 0.13, 0.24, { type: 'triangle', volume: 0.075, freqRampTo: midiToHz(22), release: 0.16 });
+      tone(midiToHz(28), t + 0.14, 0.26, { type: 'sine', volume: 0.045, freqRampTo: midiToHz(18), attack: 0.001, release: 0.18 });
+
+      // 爆発の破裂音（ノイズ）
+      noise(t + 0.12, 0.06, 0.036);
+      noise(t + 0.165, 0.07, 0.028);
+      noise(t + 0.23, 0.05, 0.018);
+
+      // 火花の高音
+      tone(midiToHz(98), t + 0.18, 0.09, { type: 'square', volume: 0.04, freqRampTo: midiToHz(90), release: 0.05 });
+      tone(midiToHz(105), t + 0.205, 0.08, { type: 'triangle', volume: 0.03, freqRampTo: midiToHz(96), release: 0.05 });
+      return;
+    }
+    if (mode === 'glitter') {
+      try {
+        const glitterAudio = getGlitterMagicAudio();
+        glitterAudio.pause();
+        glitterAudio.currentTime = 0;
+        glitterAudio.volume = 0.155;
+        glitterAudio.play().catch(() => {});
+      } catch (_) {}
+
+      // キラキラ魔法風の会心SE（輝き + バースト）
+      tone(midiToHz(84), t, 0.1, { type: 'triangle', volume: 0.035, freqRampTo: midiToHz(96), release: 0.05 });
+      tone(midiToHz(91), t + 0.03, 0.12, { type: 'square', volume: 0.04, freqRampTo: midiToHz(103), release: 0.06 });
+      tone(midiToHz(98), t + 0.06, 0.15, { type: 'triangle', volume: 0.038, freqRampTo: midiToHz(110), release: 0.07 });
+      tone(midiToHz(72), t + 0.08, 0.2, { type: 'sine', volume: 0.03, attack: 0.002, release: 0.12 });
+      noise(t + 0.1, 0.04, 0.012);
+      noise(t + 0.16, 0.05, 0.01);
+      return;
+    }
+    // 激しい斬撃 + 爆発感のある衝撃音（通常正解SEより大きく差を出す）
+    // 斬撃スイープ（高域）
+    tone(midiToHz(96), t, 0.06, { type: 'sawtooth', volume: 0.06, freqRampTo: midiToHz(80), release: 0.03 });
+    tone(midiToHz(103), t + 0.012, 0.05, { type: 'square', volume: 0.05, freqRampTo: midiToHz(88), release: 0.025 });
+    tone(midiToHz(91), t + 0.028, 0.07, { type: 'sawtooth', volume: 0.05, freqRampTo: midiToHz(76), release: 0.03 });
+
+    // 金属ヒット感（キンッ）
+    tone(midiToHz(110), t + 0.02, 0.09, { type: 'triangle', volume: 0.04, freqRampTo: midiToHz(98), release: 0.05 });
+    tone(midiToHz(117), t + 0.03, 0.07, { type: 'square', volume: 0.03, freqRampTo: midiToHz(105), release: 0.04 });
+
+    // 爆発/衝撃の低音
+    tone(midiToHz(52), t + 0.035, 0.16, { type: 'sawtooth', volume: 0.085, freqRampTo: midiToHz(34), release: 0.1 });
+    tone(midiToHz(40), t + 0.045, 0.2, { type: 'triangle', volume: 0.06, freqRampTo: midiToHz(28), release: 0.12 });
+    tone(midiToHz(33), t + 0.05, 0.18, { type: 'sine', volume: 0.03, freqRampTo: midiToHz(24), attack: 0.002, release: 0.12 });
+
+    // ノイズバースト（爆発の空気感）
+    noise(t + 0.03, 0.05, 0.02);
+    noise(t + 0.065, 0.06, 0.018);
+    noise(t + 0.12, 0.045, 0.012);
+
+    // 追い打ちのきらめき（会心感の余韻）
+    tone(midiToHz(84), t + 0.13, 0.08, { type: 'square', volume: 0.05 });
+    tone(midiToHz(96), t + 0.16, 0.12, { type: 'triangle', volume: 0.04, freqRampTo: midiToHz(90), release: 0.06 });
+  }
+
+  function playDamageSfx() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const t = ctx.currentTime + 0.005;
+    playTone(midiToHz(55), t, 0.12, { type: 'sawtooth', volume: 0.08, freqRampTo: midiToHz(43), release: 0.08 });
+    playTone(midiToHz(48), t + 0.04, 0.12, { type: 'square', volume: 0.055, freqRampTo: midiToHz(36), release: 0.07 });
+    playNoise(t, 0.09, 0.03);
+  }
+
+  function playEnemyDefeatJingle() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const t = ctx.currentTime + 0.005;
+
+    // 撃破時の消滅/勝利前ジングル（オリジナル）
+    playNoise(t, 0.07, 0.03);
+    playNoise(t + 0.05, 0.08, 0.022);
+    playTone(midiToHz(48), t, 0.18, { type: 'sawtooth', volume: 0.07, freqRampTo: midiToHz(30), release: 0.12 });
+    playTone(midiToHz(55), t + 0.03, 0.16, { type: 'triangle', volume: 0.045, freqRampTo: midiToHz(36), release: 0.1 });
+    playTone(midiToHz(79), t + 0.12, 0.12, { type: 'square', volume: 0.035, freqRampTo: midiToHz(86), release: 0.05 });
+    playTone(midiToHz(84), t + 0.19, 0.14, { type: 'triangle', volume: 0.03, freqRampTo: midiToHz(96), release: 0.06 });
+  }
+
+  function playVictoryFanfare() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const t = ctx.currentTime + 0.01;
+
+    // JRPG風の短い勝利ファンファーレ（オリジナル）
+    const melody = [
+      [72, 0.00, 0.12], [76, 0.14, 0.12], [79, 0.28, 0.14],
+      [84, 0.46, 0.20], [79, 0.70, 0.12], [84, 0.84, 0.16],
+      [88, 1.04, 0.30]
+    ];
+    melody.forEach(([midi, off, dur]) => {
+      playTone(midiToHz(midi), t + off, dur, { type: 'square', volume: 0.06, attack: 0.002, release: 0.03 });
+      playTone(midiToHz(midi - 12), t + off, dur * 0.95, { type: 'triangle', volume: 0.03, attack: 0.002, release: 0.03 });
+    });
+
+    // 和音の支え
+    const chords = [
+      { notes: [60, 64, 67], off: 0.00, dur: 0.38 },
+      { notes: [65, 69, 72], off: 0.42, dur: 0.34 },
+      { notes: [67, 71, 74], off: 0.80, dur: 0.32 },
+      { notes: [72, 76, 79], off: 1.02, dur: 0.46 }
+    ];
+    chords.forEach(ch => {
+      ch.notes.forEach((midi, i) => {
+        playTone(midiToHz(midi), t + ch.off + i * 0.008, ch.dur, {
+          type: 'square',
+          volume: 0.018,
+          attack: 0.002,
+          release: 0.04
+        });
+      });
+    });
+
+    playNoise(t + 1.02, 0.06, 0.012);
+  }
+
+  function createQuestion(expr, answer, spread = 10) {
+    return window.SF.questions.createQuestion({
+      expr,
+      answer,
+      spread,
+      randInt,
+      shuffle,
+      random: Math.random
+    });
+  }
+
+  function getStageConfig(stageId = state.currentStageId) {
+    return STAGES.find(s => s.id === stageId) || STAGES[0];
+  }
+
+  function getHeroConfig(heroId = state.selectedHeroId) {
+    return HEROES.find(h => h.id === heroId) || HEROES[0];
+  }
+
+  function renderHeroSelect() {
+    if (!els.heroSelectGrid) return;
+    els.heroSelectGrid.innerHTML = '';
+    HEROES.forEach(hero => {
+      const unlocked = state.unlockedHeroIds.includes(hero.id);
+      const selected = state.selectedHeroId === hero.id;
+      const btn = document.createElement('button');
+      btn.className = 'pixel-btn hero-card';
+      if (!unlocked) btn.classList.add('locked');
+      if (selected) btn.classList.add('selected');
+      btn.disabled = !unlocked;
+      btn.innerHTML = `
+        <img class="hero-thumb" src="${hero.baseImage}" alt="${hero.name}">
+        <div class="hero-card-name">${hero.name}</div>
+        <div class="hero-card-state">${!unlocked ? 'LOCKED' : selected ? 'SELECTED' : 'OPEN'}</div>
+      `;
+      btn.addEventListener('click', () => {
+        if (!unlocked) return;
+        state.selectedHeroId = hero.id;
+        saveProgress();
+        renderHeroSelect();
+      });
+      els.heroSelectGrid.appendChild(btn);
+    });
+    const selectedHero = getHeroConfig();
+    if (els.heroSelectNote) {
+      els.heroSelectNote.textContent = `えらんだキャラ: ${selectedHero.id} / ${selectedHero.name}`;
+    }
+  }
+
+  function setGachaNote(text) {
+    if (els.gachaNoteResult) els.gachaNoteResult.textContent = text;
+    if (els.gachaNoteGacha) els.gachaNoteGacha.textContent = text;
+  }
+
+  function updateGachaUi() {
+    if (!els.gachaPanel || !els.gachaBtn) return;
+    if (els.gachaCutin) els.gachaCutin.classList.remove('active');
+    if (els.gachaRarity) {
+      els.gachaRarity.classList.remove('show', 'rare', 'super');
+      els.gachaRarity.textContent = '';
+    }
+    if (els.gachaRevealImage) {
+      els.gachaRevealImage.classList.remove('show');
+      els.gachaRevealImage.src = '';
+    }
+    const lockedRemain = HEROES.some(h => !state.unlockedHeroIds.includes(h.id));
+    const visible = state.canRollGacha && lockedRemain;
+    els.gachaPanel.style.display = visible ? 'grid' : 'none';
+    els.gachaBtn.disabled = !visible;
+    if (!visible && lockedRemain) {
+      setGachaNote('ゲームクリアで新キャラ解放のチャンス！');
+    } else if (!lockedRemain) {
+      els.gachaPanel.style.display = 'grid';
+      els.gachaBtn.style.display = 'none';
+      setGachaNote('すべてのキャラを解放済みです。');
+    } else {
+      els.gachaBtn.style.display = 'block';
+    }
+  }
+
+  function waitMs(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function preloadGachaAssets() {
+    GACHA_EGG_FRAMES.concat([
+      ...HEROES.map(h => h.baseImage)
+    ]).forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }
+
+  function setGachaMotionFrame(frameIndex) {
+    if (!els.gachaMotion) return;
+    const idx = clamp(frameIndex, 0, GACHA_EGG_FRAMES.length - 1);
+    els.gachaMotion.style.backgroundImage = `url('${GACHA_EGG_FRAMES[idx]}')`;
+  }
+
+  async function playGachaMotionSprite() {
+    if (!els.gachaMotion) return;
+    const totalFrames = GACHA_EGG_FRAMES.length;
+    setGachaMotionFrame(0);
+    els.gachaMotion.classList.remove('play');
+    void els.gachaMotion.offsetWidth;
+    els.gachaMotion.classList.add('play');
+    for (let i = 0; i < totalFrames; i += 1) {
+      setGachaMotionFrame(i);
+      await waitMs(90);
+    }
+    await waitMs(220);
+  }
+
+  async function playGachaAnimation(rarity, hero) {
+    if (!els.gachaCutin || !els.gachaRarity) return;
+    els.gachaRarity.textContent = rarity === 'super' ? 'SUPER RARE' : 'RARE';
+    els.gachaRarity.classList.remove('show', 'rare', 'super');
+    els.gachaRarity.classList.add(rarity === 'super' ? 'super' : 'rare');
+    if (els.gachaRevealImage) {
+      els.gachaRevealImage.classList.remove('show');
+      els.gachaRevealImage.src = '';
+    }
+    els.gachaCutin.classList.add('active');
+    await playGachaMotionSprite();
+    if (els.gachaRevealImage) {
+      els.gachaRevealImage.src = hero.baseImage;
+      // reveal is anchored to the same animation position.
+      void els.gachaRevealImage.offsetWidth;
+      els.gachaRevealImage.classList.add('show');
+    }
+    els.gachaRarity.classList.add('show');
+    await waitMs(1450);
+    if (els.gachaMotion) els.gachaMotion.classList.remove('play');
+  }
+
+  async function runHeroGacha() {
+    const locked = HEROES.filter(h => !state.unlockedHeroIds.includes(h.id));
+    if (!locked.length) {
+      state.canRollGacha = false;
+      updateGachaUi();
+      return;
+    }
+    if (els.gachaBtn) els.gachaBtn.disabled = true;
+    if (els.gachaCloseBtn) els.gachaCloseBtn.disabled = true;
+    if (els.gachaSub) els.gachaSub.textContent = 'きらめくクリスタルを しょうかんちゅう...';
+    showScreen('gacha');
+    const pick = locked[randInt(0, locked.length - 1)];
+    const rarity = pick.id === '03' ? 'super' : 'rare';
+    await playGachaAnimation(rarity, pick);
+    state.unlockedHeroIds.push(pick.id);
+    state.unlockedHeroIds = [...new Set(state.unlockedHeroIds)];
+    state.canRollGacha = false;
+    saveProgress();
+    renderHeroSelect();
+    if (els.gachaSub) els.gachaSub.textContent = 'なかまが あらわれた！';
+    const rarityText = rarity === 'super' ? 'SUPER RARE' : 'RARE';
+    setGachaNote(`${rarityText}！ ${pick.id} / ${pick.name} が なかまになった！`);
+    if (els.gachaCloseBtn) els.gachaCloseBtn.disabled = false;
+    if (els.gachaBtn) els.gachaBtn.disabled = true;
+  }
+
+  function triggerEnemySlashEffect({ critical = false, finisher = false, criticalMode = 'slash' } = {}) {
+    const panel = els.enemyCharPanel;
+    const sprite = els.enemySprite;
+    const flash = els.enemySlashFlash;
+    const slash = els.enemySlashLayer;
+    const burst = els.enemyCriticalBurst;
+    const fire = els.enemyFireBurst;
+    const magicVideo = els.enemyMagicVideo;
+    const magic2Video = els.enemyMagic2Video;
+    if (!panel || !sprite || !flash || !slash) return;
+
+    [panel, sprite, flash, slash, burst, fire, magicVideo, magic2Video].filter(Boolean).forEach(el => el.classList.remove(
+      'enemy-hit', 'hit', 'active', 'critical-hit', 'finisher-hit', 'critical', 'finisher', 'fire-hit'
+    ));
+    // Force reflow so repeated hits replay animation.
+    void panel.offsetWidth;
+
+    panel.classList.add('enemy-hit');
+    sprite.classList.add('hit');
+    flash.classList.add('active');
+    slash.classList.add('active');
+    if (critical) {
+      panel.classList.add('critical-hit');
+      sprite.classList.add('critical-hit');
+      if (criticalMode === 'fire') {
+        sprite.classList.add('fire-hit');
+        slash.classList.remove('active');
+        if (fire) fire.classList.add('active');
+        if (magicVideo) {
+          // GIFを再スタートさせるため src を付け直す
+          const src = magicVideo.getAttribute('src');
+          magicVideo.setAttribute('src', '');
+          magicVideo.offsetWidth;
+          magicVideo.setAttribute('src', src || 'magic/begirama_like_preview.gif');
+          magicVideo.classList.add('active');
+        }
+        // 炎会心は通常斬撃を弱めて、フラッシュ中心にする
+        flash.classList.add('critical');
+      } else if (criticalMode === 'glitter') {
+        slash.classList.remove('active');
+        flash.classList.add('critical');
+        if (burst) burst.classList.add('active');
+        if (magic2Video) {
+          const src2 = magic2Video.getAttribute('src');
+          magic2Video.setAttribute('src', '');
+          magic2Video.offsetWidth;
+          magic2Video.setAttribute('src', src2 || 'magic2/magic_glitter_burst_preview.gif');
+          magic2Video.classList.add('active');
+        }
+      } else {
+        flash.classList.add('critical');
+        slash.classList.add('critical');
+        if (burst) burst.classList.add('active');
+      }
+    }
+    if (finisher) {
+      panel.classList.add('finisher-hit');
+      sprite.classList.add('finisher-hit');
+      flash.classList.add('finisher');
+      slash.classList.add('finisher');
+      // とどめだけ二段斬りっぽくもう一度フラッシュを重ねる
+      setTimeout(() => {
+        if (!flash || !slash) return;
+        flash.classList.remove('active');
+        slash.classList.remove('active');
+        void flash.offsetWidth;
+        flash.classList.add('active');
+        slash.classList.add('active');
+      }, 90);
+    }
+
+    const panelMs = finisher ? 420 : critical ? 320 : 220;
+    const flashMs = finisher ? 480 : critical ? 360 : 220;
+    const slashMs = finisher ? 560 : critical ? 420 : 320;
+    const burstMs = critical ? 420 : 0;
+    const fireMs = critical ? 560 : 0;
+    const magicVideoMs = critical ? 900 : 0;
+    const magic2VideoMs = critical ? 950 : 0;
+    setTimeout(() => panel.classList.remove('enemy-hit', 'critical-hit', 'finisher-hit'), panelMs);
+    setTimeout(() => sprite.classList.remove('hit', 'critical-hit', 'finisher-hit', 'fire-hit'), panelMs);
+    setTimeout(() => flash.classList.remove('active', 'critical', 'finisher'), flashMs);
+    setTimeout(() => slash.classList.remove('active', 'critical', 'finisher'), slashMs);
+    if (critical && burst) setTimeout(() => burst.classList.remove('active'), burstMs);
+    if (critical && fire) setTimeout(() => fire.classList.remove('active'), fireMs);
+    if (critical && magicVideo) setTimeout(() => magicVideo.classList.remove('active'), magicVideoMs);
+    if (critical && magic2Video) setTimeout(() => magic2Video.classList.remove('active'), magic2VideoMs);
+  }
+
+  function triggerEnemyDefeatEffect() {
+    const panel = els.enemyCharPanel;
+    const sprite = els.enemySprite;
+    const flash = els.enemySlashFlash;
+    const slash = els.enemySlashLayer;
+    const burst = els.enemyCriticalBurst;
+    const fire = els.enemyFireBurst;
+    const magicVideo = els.enemyMagicVideo;
+    const magic2Video = els.enemyMagic2Video;
+    const defeat = els.enemyDefeatBurst;
+    if (!panel || !sprite) return;
+
+    [panel, sprite, flash, slash, burst, fire, magicVideo, magic2Video, defeat].filter(Boolean).forEach(el => el.classList.remove(
+      'enemy-defeated', 'defeated', 'active', 'critical', 'finisher', 'fire-hit'
+    ));
+    void panel.offsetWidth;
+
+    panel.classList.add('enemy-defeated');
+    sprite.classList.add('defeated');
+    if (flash) {
+      flash.classList.add('critical', 'finisher', 'active');
+    }
+    if (slash) {
+      slash.classList.add('critical', 'finisher', 'active');
+    }
+    if (burst) {
+      burst.classList.add('active');
+    }
+    if (fire) {
+      fire.classList.add('active');
+    }
+    if (magicVideo) {
+      magicVideo.classList.add('active');
+    }
+    if (magic2Video) {
+      magic2Video.classList.add('active');
+    }
+    if (defeat) {
+      defeat.classList.add('active');
+    }
+
+    setTimeout(() => { if (flash) flash.classList.remove('active', 'critical', 'finisher'); }, 760);
+    setTimeout(() => { if (slash) slash.classList.remove('active', 'critical', 'finisher'); }, 900);
+    setTimeout(() => { if (burst) burst.classList.remove('active'); }, 760);
+    setTimeout(() => { if (fire) fire.classList.remove('active'); }, 760);
+    setTimeout(() => { if (magicVideo) magicVideo.classList.remove('active'); }, 980);
+    setTimeout(() => { if (magic2Video) magic2Video.classList.remove('active'); }, 980);
+    setTimeout(() => { if (defeat) defeat.classList.remove('active'); }, 1300);
+  }
+
+  function resetHeroImageVisual() {
+    const heroImg = els.heroImage;
+    if (!heroImg) return;
+    if (heroVisualState.resetTimer) {
+      clearTimeout(heroVisualState.resetTimer);
+      heroVisualState.resetTimer = null;
+    }
+    heroImg.src = getHeroConfig().baseImage;
+    heroImg.classList.remove('magic-pose', 'fire', 'glitter');
+  }
+
+  function triggerHeroMagicPose(mode) {
+    const heroImg = els.heroImage;
+    if (!heroImg || (mode !== 'fire' && mode !== 'glitter')) return;
+    resetHeroImageVisual();
+    heroImg.src = getHeroConfig().magicImage;
+    heroImg.classList.add('magic-pose', mode);
+    heroVisualState.resetTimer = setTimeout(() => {
+      resetHeroImageVisual();
+    }, 820);
+  }
+
+  function rollCriticalHit(answerElapsedMs) {
+    return window.SF.battle.rollCriticalHit(answerElapsedMs, Math.random);
+  }
+
+  function generateEasy(stageId = state.currentStageId) {
+    return window.SF.questions.generateEasy({
+      randInt,
+      random: Math.random,
+      createQuestion,
+      stageId
+    });
+  }
+
+  function generateNormal(stageId = state.currentStageId) {
+    return window.SF.questions.generateNormal({
+      randInt,
+      random: Math.random,
+      createQuestion,
+      stageId
+    });
+  }
+
+  function generateHard(stageId = state.currentStageId) {
+    return window.SF.questions.generateHard({
+      randInt,
+      random: Math.random,
+      createQuestion,
+      stageId
+    });
+  }
+
+  function showScreen(name) {
+    if (!screenMachine.transition(name)) return;
+    for (const [key, screen] of Object.entries(els.screens)) {
+      screen.classList.toggle('active', key === name);
+    }
+  }
+
+  function renderMap() {
+    const diffLabel = DIFFICULTIES[state.difficultyKey].label;
+    els.mapDifficultyText.textContent = `むずかしさ: ${diffLabel}`;
+    els.mapProgressText.textContent = `解放: ${state.unlockedStages} / ${STAGE_COUNT}  |  クリア: ${state.clearedStages.length} / ${STAGE_COUNT}`;
+    const latestStageId = Math.min(state.unlockedStages, STAGE_COUNT);
+
+    const pathSvg = document.getElementById('map-path-svg');
+    if (pathSvg) {
+      const points = STAGE_POSITIONS.map(p => `${p.x},${p.y}`).join(' ');
+      pathSvg.innerHTML = `
+        <polyline points="${points}" fill="none" stroke="#8a5616" stroke-width="7.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"></polyline>
+        <polyline points="${points}" fill="none" stroke="#f7b92f" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"></polyline>
+        <polyline points="${points}" fill="none" stroke="#9dff67" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"></polyline>
+      `;
+    }
+
+    els.stageGrid.innerHTML = '';
+    const newestOpen = STAGES.find(stage => stage.id === state.unlockedStages && !state.clearedStages.includes(stage.id));
+
+    STAGES.forEach((stage) => {
+      const unlocked = stage.id <= state.unlockedStages;
+      const cleared = state.clearedStages.includes(stage.id);
+      const pos = STAGE_POSITIONS[stage.id - 1] || { x: 50, y: 50 };
+      const btn = document.createElement('button');
+      btn.className = 'stage-node';
+      if (!unlocked) btn.classList.add('locked');
+      if (cleared) btn.classList.add('cleared');
+      if (stage.id === latestStageId) btn.classList.add('current');
+      if (stage.id === STAGE_COUNT) btn.classList.add('final');
+      btn.disabled = !unlocked;
+      btn.dataset.stageId = String(stage.id);
+      btn.style.left = `${pos.x}%`;
+      btn.style.top = `${pos.y}%`;
+
+      const stageIcon = cleared ? 'クリアアイコン/clear.png' : 'クリアアイコン/clearless.png';
+      const stateText = !unlocked ? 'LOCK' : cleared ? 'CLEAR!' : 'START';
+      const safeName = unlocked ? stage.name : '？？？？';
+      btn.innerHTML = `
+        <img class="stage-node-icon" src="${stageIcon}" alt="stage ${stage.id}">
+        <span class="stage-node-label">STAGE ${stage.id} ${safeName}</span>
+        <span class="stage-node-state">${stateText}</span>
+      `;
+
+      if (unlocked && stage.id === latestStageId) {
+        const marker = document.createElement('img');
+        marker.className = 'player-marker-avatar';
+        marker.src = getHeroConfig().baseImage;
+        marker.alt = 'selected hero';
+        btn.appendChild(marker);
+      }
+
+      const showNewBadge = (newestOpen && newestOpen.id === stage.id) || (stage.id === 1 && !cleared);
+      if (showNewBadge) {
+        const badge = document.createElement('div');
+        badge.className = 'stage-node-badge';
+        badge.textContent = '★';
+        btn.appendChild(badge);
+      }
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (unlocked) {
+          state.currentStageId = stage.id;
+          startBattle(state.difficultyKey, stage.id);
+        }
+      }, false);
+      els.stageGrid.appendChild(btn);
+    });
+  }
+
+  function openMap() {
+    ensureAudio();
+    startMapBgm();
+    renderMap();
+    showScreen('map');
+  }
+
+  function resetGame(diffKey, stageId = state.currentStageId) {
+    const stage = getStageConfig(stageId);
+    state.difficultyKey = diffKey;
+    state.currentStageId = stage.id;
+    state.playerHp = MAX_HP;
+    state.enemyHp = MAX_HP;
+    state.correctCount = 0;
+    state.totalCount = 0;
+    state.currentQuestion = null;
+    state.questionActive = false;
+    state.questionToken += 1;
+    state.lastOutcome = null;
+    state.canRollGacha = false;
+    updateHud();
+    els.enemySprite.className = `sprite monster ${stage.spriteClass || 'slime'}`;
+    els.enemyNameHud.textContent = stage.enemyName;
+    els.enemyNameArena.textContent = stage.enemyName;
+    els.battleMeta.textContent = `STAGE ${stage.id}: ${stage.name} / むずかしさ: ${DIFFICULTIES[diffKey].label}`;
+    els.battleMessage.textContent = `${stage.enemyName} が あらわれた！`;
+    els.questionText.textContent = 'もんだいを よみこみちゅう...';
+    els.timerText.textContent = '5.0s';
+    els.timerFill.style.transform = 'scaleX(1)';
+    resetHeroImageVisual();
+    [els.enemyCharPanel, els.enemySprite, els.enemySlashFlash, els.enemySlashLayer, els.enemyCriticalBurst, els.enemyFireBurst, els.enemyMagicVideo, els.enemyMagic2Video, els.enemyDefeatBurst, els.heroMagicOverlay]
+      .filter(Boolean)
+      .forEach(el => el.classList.remove('enemy-defeated', 'defeated', 'active', 'critical', 'finisher', 'enemy-hit', 'hit', 'critical-hit', 'finisher-hit', 'fire-hit'));
+    renderChoices([], false);
+    updateGachaUi();
+  }
+
+  function updateBar(fillEl, textEl, hp) {
+    const pct = clamp((hp / MAX_HP) * 100, 0, 100);
+    fillEl.style.width = `${pct}%`;
+    fillEl.classList.toggle('low', pct <= 45 && pct > 20);
+    fillEl.classList.toggle('critical', pct <= 20);
+    textEl.textContent = `${Math.max(0, hp)} / ${MAX_HP}`;
+  }
+
+  function updateHud() {
+    updateBar(els.playerHpFill, els.playerHpText, state.playerHp);
+    updateBar(els.enemyHpFill, els.enemyHpText, state.enemyHp);
+    els.battleScore.textContent = `せいかい: ${state.correctCount} / ${state.totalCount}`;
+  }
+
+  function renderChoices(options, enabled = true) {
+    els.choices.innerHTML = '';
+    const labels = ['A', 'B', 'C', 'D'];
+    options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'pixel-btn choice';
+      btn.disabled = !enabled;
+      btn.innerHTML = `<span class="choice-index">${labels[i]}</span><span>${opt.value}</span>`;
+      btn.addEventListener('click', () => handleChoice(i));
+      els.choices.appendChild(btn);
+    });
+
+    if (options.length === 0) {
+      for (let i = 0; i < 4; i++) {
+        const dummy = document.createElement('button');
+        dummy.className = 'pixel-btn choice';
+        dummy.disabled = true;
+        dummy.innerHTML = `<span class="choice-index">${['A','B','C','D'][i]}</span><span>----</span>`;
+        els.choices.appendChild(dummy);
+      }
+    }
+  }
+
+  function setChoicesEnabled(enabled) {
+    els.choices.querySelectorAll('button').forEach(btn => { btn.disabled = !enabled; });
+  }
+
+  function startBattle(diffKey, stageId = state.currentStageId) {
+    ensureAudio();
+    startBattleBgm();
+    resetGame(diffKey, stageId);
+    showScreen('battle');
+    setTimeout(() => nextQuestion(), 250);
+  }
+
+  function nextQuestion() {
+    if (checkEnd()) return;
+    const conf = DIFFICULTIES[state.difficultyKey];
+    const q = conf.generator(state.currentStageId);
+    state.currentQuestion = q;
+    state.questionActive = true;
+    state.questionToken += 1;
+    state.timerStartAt = performance.now();
+
+    els.questionText.textContent = q.expr;
+    els.battleMessage.textContent = 'すばやく こたえよ！';
+    renderChoices(q.options, true);
+    updateHud();
+    startTimerLoop(state.questionToken);
+  }
+
+  function startTimerLoop(token) {
+    const step = (now) => {
+      if (token !== state.questionToken || !state.questionActive) return;
+      const elapsed = now - state.timerStartAt;
+      const remain = Math.max(0, QUESTION_LIMIT_MS - elapsed);
+      const ratio = remain / QUESTION_LIMIT_MS;
+      els.timerFill.style.transform = `scaleX(${ratio})`;
+      els.timerText.textContent = `${(remain / 1000).toFixed(1)}s`;
+
+      if (remain <= 0) {
+        onTimeout();
+        return;
+      }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function handleChoice(index) {
+    if (!state.questionActive || !state.currentQuestion) return;
+    const answerElapsedMs = performance.now() - state.timerStartAt;
+    state.questionActive = false;
+    state.questionToken += 1;
+    setChoicesEnabled(false);
+    state.totalCount += 1;
+
+    const picked = state.currentQuestion.options[index];
+    if (picked && picked.correct) {
+      state.correctCount += 1;
+      const stage = getStageConfig();
+      const baseDmg = window.SF.battle.rollDamage(
+        DIFFICULTIES[state.difficultyKey].playerDmg,
+        stage.playerDmgBias,
+        randInt
+      );
+      const critical = rollCriticalHit(answerElapsedMs);
+      const criticalMode = critical ? ['fire', 'glitter'][randInt(0, 1)] : 'slash';
+      const playerDamage = window.SF.battle.applyPlayerDamage(
+        state.enemyHp,
+        baseDmg,
+        critical,
+        CRITICAL_DAMAGE_CAP,
+        clamp
+      );
+      const dmg = playerDamage.damage;
+      const finisher = playerDamage.finisher;
+      state.enemyHp = playerDamage.nextEnemyHp;
+      const speedTag = answerElapsedMs <= 700 ? ' はやい！' : '';
+      if (critical) {
+        els.battleMessage.textContent = criticalMode === 'fire'
+          ? `かいしんのほのお！${speedTag} ${dmg} ダメージ！！`
+          : criticalMode === 'glitter'
+            ? `かいしんのきらめき！${speedTag} ${dmg} ダメージ！！`
+            : `かいしんのいちげき！${speedTag} ${dmg} ダメージ！！`;
+      } else {
+        els.battleMessage.textContent = `せいかい！ ゆうしゃのこうげき！ ${dmg} ダメージ`;
+      }
+      if (critical && (criticalMode === 'fire' || criticalMode === 'glitter')) {
+        triggerHeroMagicPose(criticalMode);
+        // 普通→攻撃画像→エフェクト の順に見えるように少し遅らせる
+        setTimeout(() => triggerEnemySlashEffect({ critical, finisher, criticalMode }), 90);
+      } else {
+        triggerEnemySlashEffect({ critical, finisher, criticalMode });
+      }
+      if (critical && (criticalMode === 'fire' || criticalMode === 'glitter')) {
+        setTimeout(() => playCriticalSfx(criticalMode), 110);
+      } else if (critical) {
+        playCriticalSfx(criticalMode);
+      } else {
+        playCorrectSfx();
+      }
+      if (finisher) {
+        els.battleMessage.textContent = critical
+          ? `${criticalMode === 'fire' ? 'かいしんのほのお' : criticalMode === 'glitter' ? 'かいしんのきらめき' : 'かいしんのいちげき'}！${speedTag} ${dmg} ダメージ！！ ${getStageConfig().enemyName} を たおした！`
+          : `とどめのいちげき！ ${dmg} ダメージ！ ${getStageConfig().enemyName} を たおした！`;
+        stopBgm();
+        playEnemyDefeatJingle();
+        setTimeout(() => triggerEnemyDefeatEffect(), 70);
+      }
+    } else {
+      const answer = state.currentQuestion.answer;
+      const stage = getStageConfig();
+      const baseDmg = window.SF.battle.rollDamage(
+        DIFFICULTIES[state.difficultyKey].enemyDmg,
+        stage.enemyDmgBias,
+        randInt
+      );
+      const enemyDamage = window.SF.battle.applyEnemyDamage(state.playerHp, baseDmg, clamp);
+      const dmg = enemyDamage.damage;
+      state.playerHp = enemyDamage.nextPlayerHp;
+      els.battleMessage.textContent = `ざんねん... 正解は ${answer}。 てきのはんげき！ ${dmg} ダメージ`;
+      playDamageSfx();
+    }
+
+    els.timerFill.style.transform = 'scaleX(0)';
+    els.timerText.textContent = '0.0s';
+    updateHud();
+
+    if (state.enemyHp <= 0) {
+      setTimeout(() => finishBattle(true), 1900);
+      return;
+    }
+    if (checkEnd()) return;
+    setTimeout(nextQuestion, 900);
+  }
+
+  function onTimeout() {
+    if (!state.questionActive) return;
+    state.questionActive = false;
+    state.questionToken += 1;
+    setChoicesEnabled(false);
+    state.totalCount += 1;
+    const stage = getStageConfig();
+    const baseDmg = window.SF.battle.rollDamage(
+      DIFFICULTIES[state.difficultyKey].enemyDmg,
+      stage.enemyDmgBias,
+      randInt
+    );
+    const enemyDamage = window.SF.battle.applyEnemyDamage(state.playerHp, baseDmg, clamp);
+    const dmg = enemyDamage.damage;
+    state.playerHp = enemyDamage.nextPlayerHp;
+    els.battleMessage.textContent = `じかんぎれ！ てきのこうげき！ ${dmg} ダメージ`;
+    playDamageSfx();
+    els.timerFill.style.transform = 'scaleX(0)';
+    els.timerText.textContent = '0.0s';
+    updateHud();
+
+    if (checkEnd()) return;
+    setTimeout(nextQuestion, 900);
+  }
+
+  function checkEnd() {
+    if (state.enemyHp <= 0 || state.playerHp <= 0) {
+      finishBattle(state.enemyHp <= 0 && state.playerHp > 0);
+      return true;
+    }
+    return false;
+  }
+
+  function finishBattle(win) {
+    state.questionActive = false;
+    state.questionToken += 1;
+    state.lastOutcome = win ? 'win' : 'lose';
+    const total = state.totalCount;
+    const acc = total ? Math.round((state.correctCount / total) * 100) : 0;
+    const diffLabel = DIFFICULTIES[state.difficultyKey].label;
+    const stage = getStageConfig();
+
+    if (win) {
+      if (!state.clearedStages.includes(stage.id)) state.clearedStages.push(stage.id);
+      state.unlockedStages = Math.max(state.unlockedStages, Math.min(STAGE_COUNT, stage.id + 1));
+      state.currentStageId = Math.min(STAGE_COUNT, stage.id + 1);
+      saveProgress();
+      stopBgm();
+      playVictoryFanfare();
+      if (stage.id === STAGE_COUNT && HEROES.some(h => !state.unlockedHeroIds.includes(h.id))) {
+        state.canRollGacha = true;
+      }
+    }
+
+    els.resultTitle.textContent = win ? 'しょうり！' : 'はいぼく...';
+    els.resultTitle.style.color = win ? '#fff3b0' : '#ffd0c8';
+    els.resultDifficulty.textContent = `${diffLabel} / STAGE ${stage.id}`;
+    els.resultCorrect.textContent = String(state.correctCount);
+    els.resultTotal.textContent = String(total);
+    els.resultAccuracy.textContent = `${acc}%`;
+    els.resultSummary.textContent = win
+      ? `STAGE ${stage.id}「${stage.name}」を クリア！`
+      : `つぎは STAGE ${stage.id} を こうりゃくしよう！`;
+    const canAdvance = win && stage.id < STAGE_COUNT;
+    els.retryBtn.textContent = canAdvance ? '次のステージへ' : 'もういちど たたかう';
+    if (!win) state.canRollGacha = false;
+    updateGachaUi();
+    showScreen('result');
+  }
+
+  els.difficultyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.difficultyKey = btn.dataset.difficulty;
+      openMap();
+    });
+  });
+
+  els.retryBtn.addEventListener('click', () => {
+    const goNext = state.lastOutcome === 'win' && state.currentStageId < STAGE_COUNT;
+    const nextStageId = goNext ? state.currentStageId + 1 : state.currentStageId;
+    startBattle(state.difficultyKey, nextStageId);
+  });
+  els.backTitleBtn.addEventListener('click', () => {
+    state.questionActive = false;
+    state.questionToken += 1;
+    openMap();
+  });
+  els.mapBackTitleBtn.addEventListener('click', () => {
+    stopBgm();
+    showScreen('title');
+  });
+  if (els.mapResetStagesBtn) {
+    els.mapResetStagesBtn.addEventListener('click', () => {
+      state.unlockedStages = 1;
+      state.clearedStages = [];
+      state.currentStageId = 1;
+      state.canRollGacha = false;
+      state.lastOutcome = null;
+      saveProgress();
+      renderMap();
+    });
+  }
+  if (els.gachaBtn) {
+    els.gachaBtn.addEventListener('click', runHeroGacha);
+  }
+  if (els.gachaCloseBtn) {
+    els.gachaCloseBtn.addEventListener('click', () => openMap());
+  }
+  if (els.resetHeroesBtn) {
+    els.resetHeroesBtn.addEventListener('click', () => {
+      state.unlockedHeroIds = ['00'];
+      state.selectedHeroId = '00';
+      saveProgress();
+      renderHeroSelect();
+      if (els.heroSelectNote) els.heroSelectNote.textContent = 'キャラ解放をリセットしました。';
+    });
+  }
+
+  // 初期表示用ダミー4択
+  loadProgress();
+  preloadGachaAssets();
+  renderHeroSelect();
+  updateGachaUi();
+  renderChoices([], false);
+})();
+</script>
+</body>
+</html>
