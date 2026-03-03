@@ -469,6 +469,10 @@
     box-shadow: 1px 1px 0 rgba(0,0,0,0.18);
   }
 
+  .stage-node-label-name {
+    display: inline;
+  }
+
   .stage-node-state {
     position: absolute;
     bottom: -20px;
@@ -1948,6 +1952,7 @@
     }
     .stage-node { width: 62px; height: 62px; }
     .player-marker-avatar { width: 52px; height: 52px; }
+    .stage-node-label-name { display: none; }
     .hud, .question-area { grid-template-columns: 1fr; }
     .arena { grid-template-columns: 1fr 1fr; gap: 8px; }
     .char-panel { min-height: 150px; }
@@ -1975,6 +1980,7 @@
     .hero-image.magic-pose { width: 88px; height: 88px; }
     .sprite.monster { width: 88px; height: 88px; }
     .stage-node-label { font-size: 10px; top: -22px; }
+    .stage-node-label-name { display: none; }
     .stage-node-state { font-size: 9px; bottom: -18px; }
     .pixel-btn { font-size: 14px; letter-spacing: 0.5px; }
     .question-text { font-size: 18px; }
@@ -2244,6 +2250,7 @@
   const audio = {
     ctx: null,
     master: null,
+    compressor: null,
     bgmStarted: false,
     bgmTimer: null,
     bgmStep: 0,
@@ -2309,9 +2316,16 @@
     if (!AudioCtx) return null;
     if (!audio.ctx) {
       audio.ctx = new AudioCtx();
+      audio.compressor = audio.ctx.createDynamicsCompressor();
+      audio.compressor.threshold.value = -28;
+      audio.compressor.knee.value = 20;
+      audio.compressor.ratio.value = 7;
+      audio.compressor.attack.value = 0.003;
+      audio.compressor.release.value = 0.18;
       audio.master = audio.ctx.createGain();
-      audio.master.gain.value = 0.2;
-      audio.master.connect(audio.ctx.destination);
+      audio.master.gain.value = 0.14;
+      audio.master.connect(audio.compressor);
+      audio.compressor.connect(audio.ctx.destination);
     }
     if (audio.ctx.state === 'suspended') {
       audio.ctx.resume().catch(() => {});
@@ -3159,7 +3173,7 @@
       const safeName = unlocked ? stage.name : '？？？？';
       btn.innerHTML = `
         <img class="stage-node-icon" src="${stageIcon}" alt="stage ${stage.id}">
-        <span class="stage-node-label">STAGE ${stage.id} ${safeName}</span>
+        <span class="stage-node-label">STAGE ${stage.id}<span class="stage-node-label-name"> ${safeName}</span></span>
         <span class="stage-node-state">${stateText}</span>
       `;
 
