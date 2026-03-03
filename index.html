@@ -2261,8 +2261,23 @@
 
   const assetAudio = {
     fireMagic: null,
-    glitterMagic: null
+    glitterMagic: null,
+    battleBgm: null,
+    battleBgmDisabled: false
   };
+
+  const BATTLE_BGM_CANDIDATES = [
+    'battle_music/jrpg_battle_theme_ff5_inspired_original.wav',
+    'battle_music/battle_bgm.mp3',
+    'battle_music/battle_music.mp3',
+    'battle_music/bgm.mp3',
+    'battle_music/battle.wav',
+    'battle_music/battle_music.wav',
+    'battle_music/bgm.wav',
+    'battle_music/battle.ogg',
+    'battle_music/battle_music.ogg',
+    'battle_music/bgm.ogg'
+  ];
 
   const heroVisualState = {
     resetTimer: null
@@ -2475,11 +2490,8 @@
     }, tickMs);
   }
 
-  function startBattleBgm() {
-    const ctx = ensureAudio();
+  function startBattleBgmSynth(ctx) {
     if (!ctx) return;
-    if (audio.bgmStarted && audio.bgmMode === 'battle') return;
-    stopBgm();
     audio.bgmStarted = true;
     audio.bgmMode = 'battle';
     audio.bgmStep = 0;
@@ -2607,12 +2619,52 @@
     }, tickMs);
   }
 
+  function startBattleBgm() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    if (audio.bgmStarted && (audio.bgmMode === 'battle' || audio.bgmMode === 'battle-file')) return;
+    stopBgm();
+
+    // battle_music 配下の音源を優先再生。無ければ既存の合成BGMへフォールバック。
+    if (!assetAudio.battleBgmDisabled) {
+      const tryFile = (idx) => {
+        if (idx >= BATTLE_BGM_CANDIDATES.length) {
+          assetAudio.battleBgmDisabled = true;
+          startBattleBgmSynth(ctx);
+          return;
+        }
+        const path = BATTLE_BGM_CANDIDATES[idx];
+        const el = new Audio(path);
+        el.preload = 'auto';
+        el.loop = true;
+        el.volume = 0.56;
+        el.addEventListener('canplaythrough', () => {
+          stopBgm();
+          assetAudio.battleBgm = el;
+          audio.bgmStarted = true;
+          audio.bgmMode = 'battle-file';
+          el.play().catch(() => startBattleBgmSynth(ctx));
+        }, { once: true });
+        el.addEventListener('error', () => tryFile(idx + 1), { once: true });
+        el.load();
+      };
+      tryFile(0);
+      return;
+    }
+
+    startBattleBgmSynth(ctx);
+  }
+
   function stopBgm() {
     audio.bgmStarted = false;
     audio.bgmMode = '';
     if (audio.bgmTimer) {
       clearInterval(audio.bgmTimer);
       audio.bgmTimer = null;
+    }
+    if (assetAudio.battleBgm) {
+      assetAudio.battleBgm.pause();
+      assetAudio.battleBgm.currentTime = 0;
     }
   }
 
