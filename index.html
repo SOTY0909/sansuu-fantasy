@@ -2102,6 +2102,7 @@
         <div class="panel battle-footer">
           <div id="battle-meta">むずかしさ: ふつう</div>
           <div id="battle-score">せいかい: 0 / 0</div>
+          <button id="battle-back-map-btn" class="pixel-btn">マップへ もどる</button>
         </div>
       </section>
 
@@ -2223,6 +2224,7 @@
     choices: document.getElementById('choices'),
     battleMeta: document.getElementById('battle-meta'),
     battleScore: document.getElementById('battle-score'),
+    battleBackMapBtn: document.getElementById('battle-back-map-btn'),
     resultTitle: document.getElementById('result-title'),
     resultDifficulty: document.getElementById('result-difficulty'),
     resultCorrect: document.getElementById('result-correct'),
@@ -3500,6 +3502,13 @@
     state.questionToken += 1;
     openMap();
   });
+  if (els.battleBackMapBtn) {
+    els.battleBackMapBtn.addEventListener('click', () => {
+      state.questionActive = false;
+      state.questionToken += 1;
+      openMap();
+    });
+  }
   els.mapBackTitleBtn.addEventListener('click', () => {
     stopBgm();
     showScreen('title');
