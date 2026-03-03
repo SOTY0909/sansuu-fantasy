@@ -1938,11 +1938,23 @@
     .difficulty-grid { grid-template-columns: 1fr; }
     .hero-select-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .map-board { min-height: auto; padding: 8px; }
-    .map-canvas { min-height: clamp(340px, 58vh, 460px); }
+    .map-canvas {
+      min-height: 0;
+      aspect-ratio: 3 / 2;
+      background:
+        linear-gradient(rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+        url('map/map.png') center center / contain no-repeat;
+      background-color: #1a2f44;
+    }
     .stage-node { width: 62px; height: 62px; }
     .player-marker-avatar { width: 52px; height: 52px; }
-    .hud, .arena, .question-area { grid-template-columns: 1fr; }
-    .char-panel { min-height: 180px; }
+    .hud, .question-area { grid-template-columns: 1fr; }
+    .arena { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .char-panel { min-height: 150px; }
+    .sprite-wrap { width: 120px; height: 120px; }
+    .hero-image { max-width: 106px; max-height: 106px; }
+    .hero-image.magic-pose { width: 106px; height: 106px; }
+    .sprite.monster { width: 106px; height: 106px; }
     .choices { grid-template-columns: 1fr; }
     .pixel-btn { padding: 11px 9px; min-height: 44px; }
     .gacha-screen .gacha-cutin { min-height: 250px; }
@@ -1956,6 +1968,12 @@
     .title-sub { font-size: 12px; }
     .map-title { font-size: clamp(18px, 6vw, 24px); }
     .map-sub { font-size: 12px; }
+    .arena { gap: 6px; }
+    .char-panel { min-height: 132px; }
+    .sprite-wrap { width: 98px; height: 98px; }
+    .hero-image { max-width: 88px; max-height: 88px; }
+    .hero-image.magic-pose { width: 88px; height: 88px; }
+    .sprite.monster { width: 88px; height: 88px; }
     .stage-node-label { font-size: 10px; top: -22px; }
     .stage-node-state { font-size: 9px; bottom: -18px; }
     .pixel-btn { font-size: 14px; letter-spacing: 0.5px; }
