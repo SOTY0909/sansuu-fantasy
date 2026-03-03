@@ -2168,6 +2168,8 @@
     STAGES,
     STAGE_POSITIONS
   } = window.SF.data;
+  const MASTER_GAIN_MAP = 0.14;
+  const MASTER_GAIN_BATTLE = 0.07;
 
   const DIFFICULTIES = {
     easy: { ...DIFFICULTY_STATS.easy, generator: generateEasy },
@@ -2340,7 +2342,7 @@
       audio.compressor.attack.value = 0.003;
       audio.compressor.release.value = 0.18;
       audio.master = audio.ctx.createGain();
-      audio.master.gain.value = 0.14;
+      audio.master.gain.value = MASTER_GAIN_MAP;
       audio.master.connect(audio.compressor);
       audio.compressor.connect(audio.ctx.destination);
     }
@@ -2428,6 +2430,7 @@
   function startMapBgm() {
     const ctx = ensureAudio();
     if (!ctx) return;
+    if (audio.master) audio.master.gain.value = MASTER_GAIN_MAP;
     if (audio.bgmStarted && audio.bgmMode === 'map') return;
     stopBgm();
     audio.bgmStarted = true;
@@ -2622,6 +2625,7 @@
   function startBattleBgm() {
     const ctx = ensureAudio();
     if (!ctx) return;
+    if (audio.master) audio.master.gain.value = MASTER_GAIN_BATTLE;
     if (audio.bgmStarted && (audio.bgmMode === 'battle' || audio.bgmMode === 'battle-file')) return;
     stopBgm();
 
