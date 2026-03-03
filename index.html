@@ -2178,7 +2178,7 @@
   const screenMachine = window.SF.stateMachine.createScreenStateMachine('title', {
     title: ['map'],
     map: ['title', 'battle'],
-    battle: ['result'],
+    battle: ['result', 'map'],
     result: ['map', 'battle', 'gacha'],
     gacha: ['result', 'map']
   });
