@@ -1995,7 +1995,7 @@
         <div></div>
         <div class="panel title-box">
           <h1 class="title-main">算数ファンタジー</h1>
-          <p class="title-sub">5びょういないに こたえて モンスターを たおそう！</p>
+          <p class="title-sub">10びょういないに こたえて モンスターを たおそう！</p>
         </div>
         <div class="panel">
           <div style="margin-bottom:10px; color:#fff3b0; letter-spacing:1px;">むずかしさを えらんで ステージマップへ</div>
@@ -2009,7 +2009,7 @@
           <div id="hero-select-note" class="small-note" style="text-align:left; margin-top:4px;">えらんだキャラ: 00</div>
           <button id="reset-heroes-btn" class="pixel-btn secondary-btn" style="margin-top:8px;">キャラ解放をリセット</button>
         </div>
-        <div class="small-note">4たくクイズ / 5びょうで てきのこうげき / ステージをクリアして次を解放</div>
+        <div class="small-note">4たくクイズ / 10びょうで てきのこうげき / ステージをクリアして次を解放</div>
       </section>
 
       <section id="screen-map" class="screen map-screen" aria-label="マップ画面">
@@ -2091,7 +2091,7 @@
             <div id="battle-message" class="message-line">モンスターが あらわれた！</div>
             <div id="question-text" class="question-text">しばらくおまちください...</div>
             <div class="timer-wrap">
-              <div class="timer-label"><span>てきのこうげきまで</span><span id="timer-text">5.0s</span></div>
+            <div class="timer-label"><span>てきのこうげきまで</span><span id="timer-text">10.0s</span></div>
               <div class="timer-bar"><div id="timer-fill" class="timer-fill"></div></div>
             </div>
           </div>
@@ -3290,7 +3290,7 @@
     els.battleMeta.textContent = `STAGE ${stage.id}: ${stage.name} / むずかしさ: ${DIFFICULTIES[diffKey].label}`;
     els.battleMessage.textContent = `${stage.enemyName} が あらわれた！`;
     els.questionText.textContent = 'もんだいを よみこみちゅう...';
-    els.timerText.textContent = '5.0s';
+    els.timerText.textContent = `${(QUESTION_LIMIT_MS / 1000).toFixed(1)}s`;
     els.timerFill.style.transform = 'scaleX(1)';
     resetHeroImageVisual();
     [els.enemyCharPanel, els.enemySprite, els.enemySlashFlash, els.enemySlashLayer, els.enemyCriticalBurst, els.enemyFireBurst, els.enemyMagicVideo, els.enemyMagic2Video, els.enemyDefeatBurst, els.heroMagicOverlay]

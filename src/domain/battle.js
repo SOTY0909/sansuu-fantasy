@@ -3,7 +3,7 @@
 
   function rollCriticalHit(answerElapsedMs, random) {
     if (!Number.isFinite(answerElapsedMs)) return false;
-    if (answerElapsedMs <= 2000) return true;
+    if (answerElapsedMs <= 4000) return true;
 
     let chance = 0.04;
     if (answerElapsedMs <= 2600) chance = 0.06;

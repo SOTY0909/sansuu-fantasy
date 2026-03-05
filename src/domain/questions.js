@@ -126,11 +126,12 @@
   }
 
   function generateEasy(deps) {
+    const easedStage = clamp((deps.stageId || 1) - 3, 1, 10);
     return generateByStage({
       randInt: deps.randInt,
       random: deps.random,
       createQuestion: deps.createQuestion,
-      stageId: deps.stageId,
+      stageId: easedStage,
       difficultyKey: "easy",
     });
   }
@@ -146,11 +147,12 @@
   }
 
   function generateHard(deps) {
+    const harderStage = clamp((deps.stageId || 1) + 2, 1, 10);
     return generateByStage({
       randInt: deps.randInt,
       random: deps.random,
       createQuestion: deps.createQuestion,
-      stageId: deps.stageId,
+      stageId: harderStage,
       difficultyKey: "hard",
     });
   }

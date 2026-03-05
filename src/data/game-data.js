@@ -4,14 +4,14 @@
   SF.data = {
     MAX_HP: 100,
     CRITICAL_DAMAGE_CAP: 20,
-    QUESTION_LIMIT_MS: 5000,
+    QUESTION_LIMIT_MS: 10000,
     STAGE_COUNT: 10,
     STORAGE_KEY: "sansuu-fantasy-progress-v1",
     HERO_STORAGE_KEY: "sansuu-fantasy-heroes-v1",
     DIFFICULTY_STATS: {
-      easy: { label: "easy", playerDmg: [18, 24], enemyDmg: [5, 9] },
-      normal: { label: "normal", playerDmg: [15, 21], enemyDmg: [7, 12] },
-      hard: { label: "hard", playerDmg: [13, 19], enemyDmg: [9, 14] },
+      easy: { label: "easy", playerDmg: [22, 32], enemyDmg: [3, 7] },
+      normal: { label: "normal", playerDmg: [14, 22], enemyDmg: [8, 14] },
+      hard: { label: "hard", playerDmg: [9, 16], enemyDmg: [14, 22] },
     },
     HEROES: [
       {
